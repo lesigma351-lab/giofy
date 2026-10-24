@@ -27,8 +27,8 @@ static const NSTimeInterval kExitDuration = 0.15;
 
 // Defaults of the Motion sliders: a little bounce, and a quarter slower than the timings above, which are
 // what Speed 100 gives. Bounce 40 puts a press at about the damping it had before the slider existed.
-const NSInteger SGRMotionBounceDefault = 40;
-const NSInteger SGRMotionSpeedDefault = 80;
+const NSInteger SGRMotionBounceDefault = 70;
+const NSInteger SGRMotionSpeedDefault = 75;
 
 UIColor *SGRPrimary(void) {
     return UIColor.whiteColor;
@@ -114,9 +114,9 @@ static NSTimeInterval timed(NSTimeInterval base) {
 static CGFloat damping(SGRMotion motion) {
     CGFloat bounce = SGRMotionBounce() / 100.0;
     switch (motion) {
-        case SGRMotionBar: return 1 - 0.30 * bounce;
-        case SGRMotionPress: return 0.75 - 0.35 * bounce;
-        default: return 1 - 0.40 * bounce;
+        case SGRMotionBar: return 1 - 0.50 * bounce;
+        case SGRMotionPress: return 0.70 - 0.45 * bounce;
+        default: return 1 - 0.62 * bounce;
     }
 }
 

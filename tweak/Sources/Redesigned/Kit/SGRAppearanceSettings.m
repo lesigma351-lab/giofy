@@ -7,11 +7,11 @@
 // The motion presets set Bounce and Speed together (SGRTokens.h): Original is the springs the build shipped
 // with, the others lean further into overshoot. A pair the sliders land on that is none of them reads as Custom.
 static NSArray<NSString *> *motionPresets(void) {
-    return @[@"Original", @"Smooth", @"Bouncy", @"Playful"];
+    return @[@"Original", @"Smooth", @"Bouncy", @"Playful", @"Jelly"];
 }
 
-static const NSInteger kPresetBounce[] = {0, 15, 40, 70};
-static const NSInteger kPresetSpeed[] = {100, 80, 80, 75};
+static const NSInteger kPresetBounce[] = {0, 15, 40, 70, 100};
+static const NSInteger kPresetSpeed[] = {100, 80, 80, 75, 70};
 
 static NSString *motionPresetName(void) {
     NSArray<NSString *> *names = motionPresets();

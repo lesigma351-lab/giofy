@@ -43,7 +43,7 @@ static const CGFloat kScreenRadiusFallback = 55;
 // travel (the card to the screen is 800 pt, so 10% would be 80): each unit of overshoot swells the sheet by this
 // many points on every side, up to the limit. Opening, the player swells a little past the screen's edges and
 // settles; closing, the card swells a little past its own size and settles.
-static const CGFloat kPopPoints = 160, kPopLimit = 24;
+static const CGFloat kPopPoints = 280, kPopLimit = 44;
 
 static CGFloat lerp(CGFloat a, CGFloat b, CGFloat t) {
     return a + (b - a) * t;
@@ -75,7 +75,7 @@ static CGFloat springStep(CFTimeInterval elapsed, CFTimeInterval duration, CGFlo
 // The damping ratio for the Bounce slider (SGRTokens.h): 0 is a spring that does not overshoot, 40 gives back a
 // tenth of its travel, 70 about a fifth and 100 over a quarter.
 static CGFloat playerDamping(void) {
-    static const CGFloat bounce[] = {0, 40, 70, 100}, ratio[] = {0.95, 0.59, 0.48, 0.375};
+    static const CGFloat bounce[] = {0, 40, 70, 100}, ratio[] = {0.95, 0.50, 0.36, 0.26};
     CGFloat value = SGRMotionBounce();
     for (int i = 1; i < 4; i++) {
         if (value <= bounce[i]) return ratio[i - 1] + (ratio[i] - ratio[i - 1]) * (value - bounce[i - 1]) / (bounce[i] - bounce[i - 1]);
@@ -216,7 +216,7 @@ static CGFloat screenRadius(void) {
     if (!container || !overlay) return;
     // How far a spring has gone past either end, kept for the sheet's swell below; everything else reads t held to 0...1.
     CGFloat over = 0;
-    if (_overshoot) over = MIN(0.3, t < 0 ? -t : (t > 1 ? t - 1 : 0));
+    if (_overshoot) over = MIN(0.45, t < 0 ? -t : (t > 1 ? t - 1 : 0));
     t = MIN(1, MAX(0, t));
     _lastT = t;
     _spotifyAlpha = overlay.alpha;

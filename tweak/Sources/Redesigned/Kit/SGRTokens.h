@@ -70,8 +70,8 @@ typedef NS_ENUM(NSInteger, SGRMotion) {
 #define SGRKeyMotionSpeed @"spotifyglass.redesign.motion.speed"
 // The player's open and close on the mod's own spring (Player/PlayerMorph.x), by these two sliders. On until switched off.
 #define SGRKeyMotionPlayer @"spotifyglass.redesign.motion.player"
-extern const NSInteger SGRMotionBounceDefault;   // 40
-extern const NSInteger SGRMotionSpeedDefault;    // 80
+extern const NSInteger SGRMotionBounceDefault;   // 70
+extern const NSInteger SGRMotionSpeedDefault;    // 75
 NSInteger SGRMotionBounce(void);   // 0...100
 NSInteger SGRMotionSpeed(void);    // 50...150
 

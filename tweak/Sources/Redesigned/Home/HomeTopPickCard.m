@@ -198,7 +198,7 @@ static void react(UIView *card, SGRTopPickFace *face) {
         UIView *strongCard = weakCard;
         if (!strongCard || SGRReduceMotion()) return;
         [weakFace setLit:down];
-        SGRAnimate(SGRMotionPress, ^{ strongCard.transform = down ? CGAffineTransformMakeScale(0.95, 0.95) : CGAffineTransformIdentity; }, nil);
+        SGRAnimate(SGRMotionPress, ^{ strongCard.transform = down ? CGAffineTransformMakeScale(0.91, 0.91) : CGAffineTransformIdentity; }, nil);
     };
     UIControl *control = (UIControl *)card;
     UIControlEvents down = UIControlEventTouchDown | UIControlEventTouchDragEnter;
@@ -208,7 +208,7 @@ static void react(UIView *card, SGRTopPickFace *face) {
     // A card springs in the first time it is drawn.
     if (SGRReduceMotion()) return;
     card.alpha = 0;
-    card.transform = CGAffineTransformMakeScale(0.88, 0.88);
+    card.transform = CGAffineTransformMakeScale(0.8, 0.8);
     dispatch_async(dispatch_get_main_queue(), ^{
         UIView *strongCard = weakCard;
         if (!strongCard) return;

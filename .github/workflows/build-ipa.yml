@@ -36,8 +36,10 @@ jobs:
 
       - name: Install tools
         run: |
-          brew install make dpkg ldid
-          python3 -m pip install --break-system-packages git+https://github.com/asdfzxcvbn/pyzule-rw.git
+          brew install make dpkg ldid uv
+          # pipeline.sh wants cyan in its own uv tool environment with Pillow (needed for --icon).
+          uv tool install --force --with pillow 'cyan @ git+https://github.com/asdfzxcvbn/pyzule-rw'
+          echo "$(uv tool dir --bin)" >> "$GITHUB_PATH"
 
       - name: Download IPA
         run: |

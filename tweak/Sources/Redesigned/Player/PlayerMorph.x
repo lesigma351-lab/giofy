@@ -101,9 +101,9 @@ static CGFloat screenRadius(void) {
 // Lets -apply: take a progress below 0 or above 1 (up to 0.3 either way) as the sheet swelling past the card or the
 // screen; without it the progress is held between them, which is what Spotify's own never leaves.
 - (void)allowOvershoot;
-// 9.1.78's progress never leaves 0...1, so this adds the bounce: opening, the sheet swells past the screen as it arrives and
-// settles back; closing, the card swells past its own size as it lands. Zero at both ends, so a still player is untouched.
-- (CGFloat)bounced:(CGFloat)progress;
+// 9.1.78's progress never leaves 0...1, so a tap runs the mod's own timed spring in its place (a drag is left to the finger):
+// opening, the sheet swells past the screen as it arrives and settles; closing, the card swells past its size as it lands.
+- (CGFloat)timed:(CGFloat)progress;
 @end
 
 @implementation SGRPlayerMorph {
@@ -118,21 +118,33 @@ static CGFloat screenRadius(void) {
     BOOL _follows;   // 9.1.90: Spotify animates the player's frame and alpha, which the morph then only reads
     BOOL _overshoot; // the progress may leave 0...1 (allowOvershoot)
     CGFloat _lastT;  // the last progress applied, 0 the card and 1 the player
-    CGFloat _lastP;  // the last progress Spotify set (bounced:)
-    BOOL _opening;   // which way it was last going
+    BOOL _began, _opening, _dragging;   // timed:
+    CFTimeInterval _started;
 }
 
-- (CGFloat)bounced:(CGFloat)progress {
+- (CGFloat)timed:(CGFloat)progress {
     if (!_overshoot) return progress;
-    if (progress != _lastP) _opening = progress > _lastP;
-    _lastP = progress;
-    if (progress <= 0 || progress >= 1) return progress;
-    // The Bounce slider's share of the travel, swung once past the end and once back over the last 45% of the way.
-    CGFloat amplitude = 0.28 * SGRMotionBounce() / 100.0;
-    CGFloat u = ((_opening ? progress : 1 - progress) - 0.55) / 0.45;
-    if (u <= 0) return progress;
-    CGFloat swing = amplitude * sin(2 * M_PI * u) * (1 - 0.4 * u);
-    return _opening ? progress + swing : progress - swing;
+    CFTimeInterval now = CACurrentMediaTime();
+    if (!_began) {
+        _began = YES;
+        _started = now;
+        // Opening starts near 0 and closing near 1.
+        _opening = progress < 0.5;
+        // A finger on the player drives it by hand: Spotify's progress is followed as it is.
+        UIWindow *window = _container.window;
+        if (window) SGForEachView(window, ^(UIView *v) {
+            for (UIGestureRecognizer *g in v.gestureRecognizers) {
+                if ([g isKindOfClass:UIPanGestureRecognizer.class] && (g.state == UIGestureRecognizerStateBegan || g.state == UIGestureRecognizerStateChanged)) self->_dragging = YES;
+            }
+        });
+    }
+    if (_dragging) return progress;
+    CGFloat end = _opening ? 1 : 0;
+    if (fabs(progress - end) < 0.002) return end;
+    // Spotify's own spring decides when it is over; this one rides the same tap on its own timing, bouncing where Spotify's does not.
+    CFTimeInterval duration = 0.45 * 100.0 / SGRMotionSpeed();
+    CGFloat step = springStep(now - _started, duration, playerDamping());
+    return _opening ? step : 1 - step;
 }
 
 - (void)allowOvershoot {
@@ -346,7 +358,7 @@ static SGRPlayerMorph *morphFor(SPTBarOverlayPresentationTransition *transition,
 - (void)setProgress:(double)progress {
     %orig;
     SGRPlayerMorph *morph = morphFor(self, YES);
-    [morph apply:[morph bounced:[self progress]]];
+    [morph apply:[morph timed:[self progress]]];
     if (morph) [self tabBarSnapshotView].alpha = 0;
 }
 

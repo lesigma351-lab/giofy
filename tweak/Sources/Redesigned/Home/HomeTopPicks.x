@@ -38,6 +38,10 @@ static char kLargeKey, kNaturalKey, kWrappedKey;
 static _Thread_local BOOL sg_enlarging;
 static NSInteger sg_topIndex = NSIntegerMax;
 
+NSInteger SGRHomeTopPicksIndex(void) {
+    return sg_topIndex;
+}
+
 NSString *const SGRHomeTopPicksTitle = @"Top Picks";
 
 static Class shelfClass(void) {
@@ -200,6 +204,7 @@ static void setLarge(UICollectionView *shelf, BOOL large) {
         return result;
     }
     if (index < sg_topIndex) sg_topIndex = index;
+    if (index == sg_topIndex) SGRHomeOrderWatch(root);
     BOOL large = index == sg_topIndex, was = objc_getAssociatedObject(layout, &kLargeKey) != nil;
     if (large != was) {
         // This measuring was of the cards at their old size. The height before is this section's own, never one

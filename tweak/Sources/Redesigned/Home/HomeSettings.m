@@ -6,6 +6,7 @@
 NSArray<SGModRow *> *SGRHomeAppearanceRows(void) {
     return @[
         SGWithSymbol(SGSwitchRow(@"Top picks", @"Home's first shelf drawn large, as the Music app's Top Picks", SGRKeyHomeTopPicks), @"rectangle.stack"),
+        SGWithSymbol(SGSwitchRow(@"Cards first", @"Top picks above the shortcuts, at the very top of Home", SGRKeyHomeCardsFirst), @"arrow.up.to.line"),
         SGWithSymbol(SGSliderRow(@"Card size", @"How large Top picks cards are drawn. 100% is Spotify's size.", 120, 220, 10,
                                  ^double { return (double)SGInt(SGRKeyHomeCardSize, 170); },
                                  ^(double value) { SGSetInt(SGRKeyHomeCardSize, (NSInteger)value); },

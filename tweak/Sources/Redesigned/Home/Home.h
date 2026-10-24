@@ -35,6 +35,9 @@
 #define SGRKeyHomeCardReact @"spotifyglass.redesign.home.cardReact"
 // A wash of the Top picks cover's color behind the top of Home, sliding as the shelf is swiped (HomeWash.m). On until switched off.
 #define SGRKeyHomeWash @"spotifyglass.redesign.home.wash"
+// Top picks above the shortcuts (HomeOrder.m): the page's layout answers with the Top picks section first and what was above
+// it moved down. On until switched off.
+#define SGRKeyHomeCardsFirst @"spotifyglass.redesign.home.cardsFirst"
 @class SGModRow;
 NSArray<SGModRow *> *SGRHomeAppearanceRows(void);   // for the Appearance page (App/Pages.m)
 // The Color setting as 0...1 (HomeCoverColor.x).
@@ -44,6 +47,10 @@ UIColor *SGRHomeVivid(UIColor *color, CGFloat lift);
 
 // Whether this shelf (a Home_CarouselKit.TouchCancellingCollectionView) is drawn as Top picks now (HomeTopPicks.x).
 BOOL SGRHomeShelfIsTopPicks(UICollectionView *shelf);
+// The index (section * 10000 + item) of the section Top picks is drawn in, NSIntegerMax before one is found (HomeTopPicks.x).
+NSInteger SGRHomeTopPicksIndex(void);
+// Moves the Top picks section of the page `shelf` is in to the top (HomeOrder.m); called as the section is measured.
+void SGRHomeOrderWatch(UIView *shelf);
 // The Top picks shelf `view` is inside, or nil.
 UICollectionView *SGRHomeTopPicksShelfAround(UIView *view);
 // The heading the Top picks shelf shows in place of Spotify's.

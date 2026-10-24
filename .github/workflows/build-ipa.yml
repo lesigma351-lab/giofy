@@ -49,7 +49,11 @@ jobs:
         run: |
           mkdir -p ipa
           curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 "${{ inputs.ipa_url }}" -o ipa/spotify.ipa
-          case "$(file --mime-type -b ipa/spotify.ipa)" in application/zip|application/x-ios-app) ;; *) echo "::error::Not an IPA"; exit 1 ;; esac
+          ls -l ipa/spotify.ipa
+          if ! unzip -tq ipa/spotify.ipa >/dev/null 2>&1; then
+            echo "::error::The download is not a complete IPA ($(stat -f%z ipa/spotify.ipa 2>/dev/null || stat -c%s ipa/spotify.ipa) bytes, starts with: $(head -c 40 ipa/spotify.ipa | tr -c '[:print:]' '.')). The host cut it off or sent a web page: use a direct link to the whole file."
+            exit 1
+          fi
 
       - name: Build
         env:

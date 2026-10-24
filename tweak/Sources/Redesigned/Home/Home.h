@@ -33,6 +33,8 @@
 // Top picks cards that react: a press squishes the card and lights its glass, and a card springs in as it first appears
 // (HomeTopPickCard.m). On until switched off.
 #define SGRKeyHomeCardReact @"spotifyglass.redesign.home.cardReact"
+// A wash of the Top picks cover's color behind the top of Home, sliding as the shelf is swiped (HomeWash.m). On until switched off.
+#define SGRKeyHomeWash @"spotifyglass.redesign.home.wash"
 @class SGModRow;
 NSArray<SGModRow *> *SGRHomeAppearanceRows(void);   // for the Appearance page (App/Pages.m)
 // The Color setting as 0...1 (HomeCoverColor.x).
@@ -50,6 +52,11 @@ extern NSString *const SGRHomeTopPicksTitle;
 // Styles a shelf card (id=Components.UI.HomeCard) as a Top picks card while its shelf is Top picks, and takes that
 // style off again when it is not; YES while it is one (HomeTopPickCard.m).
 BOOL SGRHomeStyleTopPick(UIView *card);
+
+// The color a Top picks card is drawn in, nil until its cover is read (HomeTopPickCard.m).
+UIColor *SGRHomeTopPickColor(UIView *card);
+// Keeps the wash in step with the shelf `card` is in (HomeWash.m).
+void SGRHomeWashWatch(UIView *card);
 
 // A cover's average color (HomeCoverColor.x): returned when known, else nil, and `later` called on the main thread once
 // it is worked out (nil for a picture with no bitmap). Main thread.

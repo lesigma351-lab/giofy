@@ -29,6 +29,7 @@ static char kFaceKey, kImageKey, kReactKey;
 @interface SGRTopPickFace : UIView
 @property (nonatomic) CGFloat artBottom;
 - (void)setLit:(BOOL)lit;
+@property (nonatomic, readonly) UIColor *color;
 @property (nonatomic, weak) UIImage *image;
 @property (nonatomic, readonly) UILabel *title;
 @property (nonatomic, readonly) UILabel *subtitle;
@@ -78,6 +79,10 @@ static char kFaceKey, kImageKey, kReactKey;
     [self applyFonts];
     [self setColor:nil animated:NO];
     return self;
+}
+
+- (UIColor *)color {
+    return _color;
 }
 
 - (void)setLit:(BOOL)lit {
@@ -211,6 +216,11 @@ static void react(UIView *card, SGRTopPickFace *face) {
     });
 }
 
+UIColor *SGRHomeTopPickColor(UIView *card) {
+    SGRTopPickFace *face = objc_getAssociatedObject(card, &kFaceKey);
+    return face.hidden ? nil : face.color;
+}
+
 BOOL SGRHomeStyleTopPick(UIView *card) {
     SGRTopPickFace *face = objc_getAssociatedObject(card, &kFaceKey);
     if (!SGRHomeTopPicksShelfAround(card)) {
@@ -253,6 +263,7 @@ BOOL SGRHomeStyleTopPick(UIView *card) {
         });
     }
     paint(face, cover.image);
+    SGRHomeWashWatch(card);
 
     NSArray<UILabel *> *labels = labelsOf(card, face);
     setText(face.title, labels.firstObject.text);

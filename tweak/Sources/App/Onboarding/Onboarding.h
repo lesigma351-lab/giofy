@@ -30,7 +30,7 @@ BOOL SGWhatsNewShowing(void);
 // text and About follow.
 #define SGSpotifyMadeFor @"9.1.78"
 #define SGSpotifySupportedVersions @[SGSpotifyMadeFor, @"9.1.88"]
-#define SGSpotifyLikelyWorksVersions @[@"9.1.90"]
+#define SGSpotifyLikelyWorksVersions @[@"9.1.90", @"9.1.94"]
 @class SGModRow;
 // SGEeveeSpotifyInjected() is Shared/Lyrics/Lyrics.h's.
 NSString *SGSpotifyVersion(void);

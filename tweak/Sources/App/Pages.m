@@ -19,6 +19,7 @@
 #import "Native/Player/NowPlaying.h"
 #import "Shared/LiveActivity/LiveActivity.h"
 #import "Redesigned/Home/Home.h"
+#import "Redesigned/Library/Library.h"
 #import "Redesigned/Lyrics/LyricsText.h"
 #import "Redesigned/Lyrics/LyricsLook.h"
 #import "Redesigned/Navbar/Navbar.h"
@@ -94,8 +95,14 @@ UIViewController *SGAppearancePage(void) {
     NSMutableArray<SGModRow *> *everywhere = [NSMutableArray arrayWithArray:SGAppFontRows()];
     SGModRow *icon = SGAppIconRow();
     if (icon) [everywhere addObject:icon];
+    NSArray<SGModRow *> *looks;
+    if (SGRedesignedUIStored()) {
+        looks = [[SGRAppearanceRows() arrayByAddingObjectsFromArray:SGRHomeAppearanceRows()] arrayByAddingObjectsFromArray:SGRLibraryAppearanceRows()];
+    } else {
+        looks = SGNativeAppearanceRows();
+    }
     return [[SGModPage alloc] initWithTitle:@"Appearance" intro:SGRestartNote sections:@[
-        SGSection(nil, SGRedesignedUIStored() ? [SGRAppearanceRows() arrayByAddingObjectsFromArray:SGRHomeAppearanceRows()] : SGNativeAppearanceRows()),
+        SGSection(nil, looks),
         SGSection(nil, everywhere),
     ] footer:nil];
 }

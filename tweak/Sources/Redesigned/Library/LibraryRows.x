@@ -68,6 +68,7 @@ static void style(UIView *cell) {
     if (thumb) roundCorners(thumb, SGRRadiusThumb);
     else roundCorners(SGRFindByIdentifier(cell, @"Components.UI.CardLibrary.Artwork", &kCoverKey), SGRRadiusCover);
     hairline(cell, thumb);
+    SGRFolderPicturesStyle(cell);
 
     // The first cell that held an artwork, so the line says what was found rather than what had not loaded yet.
     static BOOL logged;

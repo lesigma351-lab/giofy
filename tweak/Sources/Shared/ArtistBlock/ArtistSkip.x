@@ -7,6 +7,7 @@
 #import <MediaPlayer/MediaPlayer.h>
 #import "Core/SGCore.h"
 #import "ArtistBlock.h"
+#import "Shared/MusicOnly/MusicOnly.h"
 #import "Headers/SPTPlayer.h"
 #import "Headers/SPTNowPlayingPlaybackController.h"
 
@@ -70,6 +71,11 @@ static void trackMayHaveChanged(void) {
     if (!key || [key isEqualToString:sg_seenTrack]) return;
     sg_seenTrack = key;
 
+    // Music only: an episode or an audiobook chapter is skipped like a blocked artist's track.
+    if (SGFlag(SGKeyMusicOnly, NO) && SGIsNonMusicURI(key)) {
+        skip(track, nil);
+        return;
+    }
     NSDictionary *artist = blockedArtistOf(track);
     if (artist) skip(track, artist);
 }
@@ -95,7 +101,7 @@ static void trackMayHaveChanged(void) {
 %hook MPNowPlayingInfoCenter
 - (void)setNowPlayingInfo:(NSDictionary *)info {
     %orig;
-    if (!SGFlag(SGKeyArtistBlock, NO)) return;
+    if (!SGFlag(SGKeyArtistBlock, NO) && !SGFlag(SGKeyMusicOnly, NO)) return;
     dispatch_async(dispatch_get_main_queue(), ^{ trackMayHaveChanged(); });
 }
 %end

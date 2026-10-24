@@ -68,6 +68,8 @@ typedef NS_ENUM(NSInteger, SGRMotion) {
 // per animation. Reduce Motion still makes the springs instant, and fades, responses and exits stay as they are.
 #define SGRKeyMotionBounce @"spotifyglass.redesign.motion.bounce"
 #define SGRKeyMotionSpeed @"spotifyglass.redesign.motion.speed"
+// The player's open and close on the mod's own spring (Player/PlayerMorph.x), by these two sliders. On until switched off.
+#define SGRKeyMotionPlayer @"spotifyglass.redesign.motion.player"
 extern const NSInteger SGRMotionBounceDefault;   // 40
 extern const NSInteger SGRMotionSpeedDefault;    // 80
 NSInteger SGRMotionBounce(void);   // 0...100

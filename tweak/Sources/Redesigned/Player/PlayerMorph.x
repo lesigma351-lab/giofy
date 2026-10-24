@@ -39,6 +39,12 @@
 
 static const CGFloat kScreenRadiusFallback = 55;
 
+// What a spring's overshoot becomes, since the sheet cannot go past the card or the screen by a fraction of its
+// travel (the card to the screen is 800 pt, so 10% would be 80): each unit of overshoot swells the sheet by this
+// many points on every side, up to the limit. Opening, the player swells a little past the screen's edges and
+// settles; closing, the card swells a little past its own size and settles.
+static const CGFloat kPopPoints = 160, kPopLimit = 24;
+
 static CGFloat lerp(CGFloat a, CGFloat b, CGFloat t) {
     return a + (b - a) * t;
 }
@@ -52,6 +58,29 @@ static CGRect lerpRect(CGRect a, CGRect b, CGFloat t) {
 static CGFloat ramp(CGFloat from, CGFloat to, CGFloat t) {
     CGFloat x = MIN(1, MAX(0, (t - from) / (to - from)));
     return x * x * (3 - 2 * x);
+}
+
+// The step response of a spring: 0 at the start, 1 once it has settled, overshooting by what `damping` (the damping
+// ratio, under 1) allows. It starts at rest and picks up quickly, about half the way in a sixth of `duration`. Its
+// envelope is down to 0.5% by `duration`, so a spring cut off there jumps by a few points at most.
+static CGFloat springStep(CFTimeInterval elapsed, CFTimeInterval duration, CGFloat damping) {
+    if (duration <= 0 || elapsed >= duration) return 1;
+    double zeta = MIN(0.95, MAX(0.2, damping));
+    double omega = 5.3 / (zeta * duration);
+    double root = sqrt(1 - zeta * zeta);
+    double decay = exp(-zeta * omega * elapsed);
+    return 1 - decay * (cos(omega * root * elapsed) + zeta / root * sin(omega * root * elapsed));
+}
+
+// The damping ratio for the Bounce slider (SGRTokens.h): 0 is a spring that does not overshoot, 40 gives back a
+// tenth of its travel, 70 about a fifth and 100 over a quarter.
+static CGFloat playerDamping(void) {
+    static const CGFloat bounce[] = {0, 40, 70, 100}, ratio[] = {0.95, 0.59, 0.48, 0.375};
+    CGFloat value = SGRMotionBounce();
+    for (int i = 1; i < 4; i++) {
+        if (value <= bounce[i]) return ratio[i - 1] + (ratio[i] - ratio[i - 1]) * (value - bounce[i - 1]) / (bounce[i] - bounce[i - 1]);
+    }
+    return ratio[3];
 }
 
 static CGFloat screenRadius(void) {
@@ -69,6 +98,9 @@ static CGFloat screenRadius(void) {
 
 @interface SGRPlayerMorph : NSObject
 @property (nonatomic, readonly) CGFloat cardTop;
+// Lets -apply: take a progress below 0 or above 1 (up to 0.3 either way) as the sheet swelling past the card or the
+// screen; without it the progress is held between them, which is what Spotify's own never leaves.
+- (void)allowOvershoot;
 @end
 
 @implementation SGRPlayerMorph {
@@ -81,7 +113,12 @@ static CGFloat screenRadius(void) {
     CGColorRef _overlayColor;
     BOOL _coverHidden;
     BOOL _follows;   // 9.1.90: Spotify animates the player's frame and alpha, which the morph then only reads
+    BOOL _overshoot; // the progress may leave 0...1 (allowOvershoot)
     CGFloat _lastT;  // the last progress applied, 0 the card and 1 the player
+}
+
+- (void)allowOvershoot {
+    _overshoot = YES;
 }
 
 // Where the card's top is in the container: 9.1.90's player comes to rest on the card, not at the screen's foot.
@@ -147,6 +184,9 @@ static CGFloat screenRadius(void) {
 - (void)apply:(CGFloat)t {
     UIView *container = _container, *overlay = _overlay, *bar = _bar;
     if (!container || !overlay) return;
+    // How far a spring has gone past either end, kept for the sheet's swell below; everything else reads t held to 0...1.
+    CGFloat over = 0;
+    if (_overshoot) over = MIN(0.3, t < 0 ? -t : (t > 1 ? t - 1 : 0));
     t = MIN(1, MAX(0, t));
     _lastT = t;
     _spotifyAlpha = overlay.alpha;
@@ -159,6 +199,10 @@ static CGFloat screenRadius(void) {
     }
     CGRect full = container.bounds;
     CGRect sheet = lerpRect(_card, full, t);
+    if (over > 0) {
+        CGFloat swell = MIN(kPopLimit, over * kPopPoints);
+        sheet = CGRectInset(sheet, -swell, -swell);
+    }
     CGFloat radius = lerp(_cardRadius, screenRadius(), t);
     CGFloat scale = full.size.width > 0 ? sheet.size.width / full.size.width : 1;
     // The player's top goes to the sheet's: a mask clips nothing above the layer's bounds, so content
@@ -312,6 +356,12 @@ static const CFTimeInterval kGiveUp = 0.9;   // UIKit's presentation runs about 
 @property (nonatomic) NSInteger still;
 @property (nonatomic) CGFloat lastY;
 @property (nonatomic) CFTimeInterval settledSince;   // when it was last driven by a finger, or began
+// The mod's own spring, for a transition that starts in nobody's hand (a tap on the bar, the close button): the sheet
+// takes its progress from the spring rather than from where Spotify has put the player, which is only read to know the
+// transition is still running. A finger on the player puts it back to following that.
+@property (nonatomic) BOOL spring, open;
+@property (nonatomic) CFTimeInterval started, duration, giveUp;
+@property (nonatomic) CGFloat damping;
 @end
 
 @implementation SGRMorphFollower
@@ -327,16 +377,23 @@ static const CFTimeInterval kGiveUp = 0.9;   // UIKit's presentation runs about 
     // open when Spotify was done, and it went in one frame (screen recording, 2026-10-11).
     CGFloat y = drawn.frame.origin.y, rest = self.morph.cardTop;
     if (rest <= 0) rest = container.bounds.size.height;
-    [self.morph apply:rest > 0 ? 1 - y / rest : 1];
     BOOL interactive = self.context.isInteractive;
+    CFTimeInterval now = CACurrentMediaTime();
+    CGFloat progress = rest > 0 ? 1 - y / rest : 1;
+    BOOL springing = self.spring && !interactive && now - self.started < self.duration;
+    if (self.spring && !interactive) {
+        CGFloat step = springStep(now - self.started, self.duration, self.damping);
+        progress = self.open ? step : 1 - step;
+    }
+    [self.morph apply:progress];
     BOOL moving = overlay.layer.animationKeys.count > 0 || fabs(y - self.lastY) > 0.5 || interactive;
     self.lastY = y;
     self.still = moving ? 0 : self.still + 1;
-    // Let go once still, or kGiveUp after a finger last drove it whatever the layer holds: a mask and a transform left
-    // on the player would keep its glass buttons from drawing.
-    CFTimeInterval now = CACurrentMediaTime();
+    // Let go once still (and the spring has run its course), or giveUp after a finger last drove it whatever the layer
+    // holds: a mask and a transform left on the player would keep its glass buttons from drawing. A transition Spotify
+    // finishes first takes the player off the screen, which lets go at once.
     if (interactive || !self.settledSince) self.settledSince = now;
-    if (self.still >= 3 || now - self.settledSince > kGiveUp) [self finish];
+    if ((self.still >= 3 && !springing) || now - self.settledSince > (self.giveUp > 0 ? self.giveUp : kGiveUp)) [self finish];
 }
 - (void)finish {
     if (!self.link) return;
@@ -375,6 +432,18 @@ static void followTransition(id transition, id<UIViewControllerContextTransition
     follower.overlay = overlay;
     follower.context = context;
     follower.lastY = CGFLOAT_MAX;
+    // A transition nobody is dragging runs on the mod's spring, as long as Spotify says it will take: it ends when
+    // Spotify's does, so the spring is over a little before that. Bounce and Speed are the Motion sliders.
+    if (!context.isInteractive && SGEnabled(SGRKeyMotionPlayer)) {
+        NSTimeInterval declared = [(id<UIViewControllerAnimatedTransitioning>)transition transitionDuration:context];
+        follower.duration = declared > 0.15 ? declared * 0.95 : 0.5;
+        follower.damping = playerDamping();
+        follower.open = to.isBeingPresented;
+        follower.started = CACurrentMediaTime();
+        follower.giveUp = MAX(kGiveUp, follower.duration + 0.3);
+        follower.spring = YES;
+        [morph allowOvershoot];
+    }
     follower.link = [CADisplayLink displayLinkWithTarget:follower selector:@selector(tick:)];
     follower.link.preferredFrameRateRange = CAFrameRateRangeMake(80, 120, 120);
     [follower.link addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
@@ -385,6 +454,14 @@ static void followTransition(id transition, id<UIViewControllerContextTransition
 }
 
 %hook _TtC19MainUI_TabBarUIImpl24CompactOverlayTransition
+// The Speed slider stretches (or shortens) the player's open and close; Spotify's animator takes how long it runs
+// from here if it asks, and the mod's spring takes it from here either way.
+- (NSTimeInterval)transitionDuration:(id<UIViewControllerContextTransitioning>)context {
+    NSTimeInterval duration = %orig;
+    if (SGRReduceMotion() || !SGEnabled(SGRKeyMotionPlayer)) return duration;
+    return duration * 100.0 / (double)SGRMotionSpeed();
+}
+
 - (void)animateTransition:(id<UIViewControllerContextTransitioning>)context {
     %orig;
     followTransition(self, context);

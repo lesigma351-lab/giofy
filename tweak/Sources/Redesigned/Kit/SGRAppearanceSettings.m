@@ -86,5 +86,6 @@ NSArray<SGModRow *> *SGRAppearanceRows(void) {
         SGWithSymbol(motion, @"sparkles"),
         SGWithSymbol(bounce, @"waveform.path"),
         SGWithSymbol(speed, @"speedometer"),
+        SGWithSymbol(SGSwitchRow(@"Springy player", @"The player opens and closes on a spring of its own, with the Bounce and Speed above. Off leaves Spotify's animation.", SGRKeyMotionPlayer), @"arrow.up.and.down.circle"),
     ];
 }

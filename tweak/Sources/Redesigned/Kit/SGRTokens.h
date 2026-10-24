@@ -61,6 +61,18 @@ typedef NS_ENUM(NSInteger, SGRMotion) {
     // it happens many times a session, so it is quicker than a layout spring. At once under Reduce Motion.
     SGRMotionBar,
 };
+// How much the springs give back and how long they take, the two sliders of Appearance > Motion. Bounce is 0 to 100:
+// at 0 a layout spring settles without overshooting, as it always did; higher lets it overshoot and settle, a press
+// bouncing more than a layout and the tab bar (which runs on every scroll) less. Speed is 50 to 150 percent of the
+// timings the build shipped with, so 80 takes a quarter longer and 100 is the original. Both apply at once, read
+// per animation. Reduce Motion still makes the springs instant, and fades, responses and exits stay as they are.
+#define SGRKeyMotionBounce @"spotifyglass.redesign.motion.bounce"
+#define SGRKeyMotionSpeed @"spotifyglass.redesign.motion.speed"
+extern const NSInteger SGRMotionBounceDefault;   // 40
+extern const NSInteger SGRMotionSpeedDefault;    // 80
+NSInteger SGRMotionBounce(void);   // 0...100
+NSInteger SGRMotionSpeed(void);    // 50...150
+
 // Runs `animations` with the motion's timing, or at once under Reduce Motion (except a fade, a response or an exit), and
 // always calls `completion`. Only transform, alpha and color belong in it while a page scrolls.
 void SGRAnimate(SGRMotion motion, void (^animations)(void), void (^completion)(BOOL finished));

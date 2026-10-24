@@ -20,11 +20,15 @@ static const NSTimeInterval kLayoutDuration = 0.45, kPressDuration = 0.32;
 // The tab bar's minimize runs on every scroll, so it is quicker than the 0.3 to 0.4 s Apple gives a
 // repositioning spring.
 static const NSTimeInterval kBarDuration = 0.26;
-static const CGFloat kPressDamping = 0.62;
 // A response lands within the press feedback's budget, on a curve that is most of the way there at once.
 static const NSTimeInterval kRespondDuration = 0.2;
 // An exit is quicker still; Native/Player/PlayerGestures.x keeps its own copy of the value.
 static const NSTimeInterval kExitDuration = 0.15;
+
+// Defaults of the Motion sliders: a little bounce, and a quarter slower than the timings above, which are
+// what Speed 100 gives. Bounce 40 puts a press at about the damping it had before the slider existed.
+const NSInteger SGRMotionBounceDefault = 40;
+const NSInteger SGRMotionSpeedDefault = 80;
 
 UIColor *SGRPrimary(void) {
     return UIColor.whiteColor;
@@ -90,6 +94,32 @@ BOOL SGRIncreaseContrast(void) {
     return UIAccessibilityDarkerSystemColorsEnabled();
 }
 
+NSInteger SGRMotionBounce(void) {
+    return MAX(0, MIN(100, SGInt(SGRKeyMotionBounce, SGRMotionBounceDefault)));
+}
+
+NSInteger SGRMotionSpeed(void) {
+    return MAX(50, MIN(150, SGInt(SGRKeyMotionSpeed, SGRMotionSpeedDefault)));
+}
+
+// A base timing at the Speed slider's setting: 100 is the base, 80 a quarter longer, 150 a third shorter.
+static NSTimeInterval timed(NSTimeInterval base) {
+    return base * 100.0 / (double)SGRMotionSpeed();
+}
+
+// The damping ratio a motion springs with at the Bounce slider's setting. A layout spring gives up to 40% of
+// its damping, never below 0.6, so a card that overshoots does not leave its place by more than a few points;
+// the bar gives up to 30%, since it runs on every scroll; a press starts livelier, 0.75, and goes down to 0.4.
+// Bounce 0 is 1 for a layout and the bar, a critically damped spring that does not overshoot at all.
+static CGFloat damping(SGRMotion motion) {
+    CGFloat bounce = SGRMotionBounce() / 100.0;
+    switch (motion) {
+        case SGRMotionBar: return 1 - 0.30 * bounce;
+        case SGRMotionPress: return 0.75 - 0.35 * bounce;
+        default: return 1 - 0.40 * bounce;
+    }
+}
+
 void SGRAnimate(SGRMotion motion, void (^animations)(void), void (^completion)(BOOL finished)) {
     if (!animations) return;
     if ((motion == SGRMotionLayout || motion == SGRMotionPress || motion == SGRMotionBar) && SGRReduceMotion()) {
@@ -100,13 +130,13 @@ void SGRAnimate(SGRMotion motion, void (^animations)(void), void (^completion)(B
     UIViewAnimationOptions options = UIViewAnimationOptionAllowUserInteraction | UIViewAnimationOptionBeginFromCurrentState;
     switch (motion) {
         case SGRMotionLayout:
-            [UIView animateWithDuration:kLayoutDuration delay:0 usingSpringWithDamping:1 initialSpringVelocity:0 options:options animations:animations completion:completion];
+            [UIView animateWithDuration:timed(kLayoutDuration) delay:0 usingSpringWithDamping:damping(motion) initialSpringVelocity:0 options:options animations:animations completion:completion];
             break;
         case SGRMotionBar:
-            [UIView animateWithDuration:kBarDuration delay:0 usingSpringWithDamping:1 initialSpringVelocity:0 options:options animations:animations completion:completion];
+            [UIView animateWithDuration:timed(kBarDuration) delay:0 usingSpringWithDamping:damping(motion) initialSpringVelocity:0 options:options animations:animations completion:completion];
             break;
         case SGRMotionPress:
-            [UIView animateWithDuration:kPressDuration delay:0 usingSpringWithDamping:kPressDamping initialSpringVelocity:0 options:options animations:animations completion:completion];
+            [UIView animateWithDuration:timed(kPressDuration) delay:0 usingSpringWithDamping:damping(motion) initialSpringVelocity:0 options:options animations:animations completion:completion];
             break;
         case SGRMotionFade:
             [UIView animateWithDuration:SGRCrossfade delay:0 options:options | UIViewAnimationOptionCurveEaseInOut animations:animations completion:completion];

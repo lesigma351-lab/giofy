@@ -25,8 +25,15 @@
 #define SGRKeyHomeTopPicks @"spotifyglass.redesign.home.topPicks"
 // Shortcuts on glass (HomeTiles.m): each shortcut tile on glass tinted by its cover, iOS 26. On until switched off.
 #define SGRKeyHomeGlassShortcuts @"spotifyglass.redesign.home.glassShortcuts"
+// How vivid Home's cover tints are, 0 to 100 on a slider (HomeSettings.m), 40 to begin with. Shortcut tiles and Top picks
+// cards take it when they are drawn, so a change shows after a restart.
+#define SGRKeyHomeColor @"spotifyglass.redesign.home.color"
 @class SGModRow;
 NSArray<SGModRow *> *SGRHomeAppearanceRows(void);   // for the Appearance page (App/Pages.m)
+// The Color setting as 0...1 (HomeCoverColor.x).
+CGFloat SGRHomeColor(void);
+// The color with its saturation multiplied by `lift`, capped at 1, hue and brightness kept (HomeCoverColor.x).
+UIColor *SGRHomeVivid(UIColor *color, CGFloat lift);
 
 // Whether this shelf (a Home_CarouselKit.TouchCancellingCollectionView) is drawn as Top picks now (HomeTopPicks.x).
 BOOL SGRHomeShelfIsTopPicks(UICollectionView *shelf);

@@ -75,7 +75,8 @@ static char kFaceKey, kImageKey;
 }
 
 - (void)setColor:(UIColor *)color animated:(BOOL)animated {
-    color = color ? SGRHomeDarkened(color, kLuminanceCeiling) : SGRElevated(UIColor.blackColor);
+    // The Color setting makes the cover's color more vivid before the ceiling holds its luminance down, so the text keeps its contrast.
+    color = color ? SGRHomeDarkened(SGRHomeVivid(color, 1 + 0.9 * SGRHomeColor()), kLuminanceCeiling) : SGRElevated(UIColor.blackColor);
     if (_color && CGColorEqualToColor(_color.CGColor, color.CGColor)) return;
     _color = color;
     [CATransaction begin];

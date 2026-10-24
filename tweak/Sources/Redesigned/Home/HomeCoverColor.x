@@ -130,6 +130,16 @@ UIColor *SGRHomeCoverColor(UIImage *image, void (^later)(UIColor *color)) {
     return nil;
 }
 
+CGFloat SGRHomeColor(void) {
+    return MAX(0, MIN(100, SGInt(SGRKeyHomeColor, 40))) / 100.0;
+}
+
+UIColor *SGRHomeVivid(UIColor *color, CGFloat lift) {
+    CGFloat hue = 0, saturation = 0, brightness = 0, alpha = 1;
+    if (![color getHue:&hue saturation:&saturation brightness:&brightness alpha:&alpha]) return color;
+    return [UIColor colorWithHue:hue saturation:MIN(1, saturation * lift) brightness:brightness alpha:alpha];
+}
+
 // The color with its relative luminance brought down to `ceiling` at most, its hue and saturation kept, so white text
 // on it keeps (1.05 / (ceiling + 0.05)) to 1.
 UIColor *SGRHomeDarkened(UIColor *color, CGFloat ceiling) {

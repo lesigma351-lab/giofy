@@ -2,7 +2,7 @@
 // edges with its own corners, the title follows it in, and the tile sits on glass tinted by its cover: on iOS 26 with
 // Shortcuts on glass on (SGRKeyHomeGlassShortcuts) and Reduce Transparency off, Liquid Glass (UIGlassEffect, the
 // regular style) whose tint is the cover's average color (HomeCoverColor.x), its saturation lifted a little and its
-// luminance held to kGlassLuminance at kGlassTintAlpha, so the grid is not one gray and the white title keeps its
+// luminance held to glassLuminance() at glassTintAlpha() (the Color setting), so the grid is not one gray and the white title keeps its
 // contrast; else a dark surface tinted faintly toward the cover's dominant color (Kit/SGRPalette.h, +tintForImage:).
 // Until the cover has loaded, the tile is plain glass or the untinted surface.
 //
@@ -24,9 +24,20 @@
 // How far the cover sits in from the tile's top, bottom and leading edges, and its corners there.
 static const CGFloat kInset = 5, kCoverRadius = 4;
 
-// The glass's tint: the cover's average color, its saturation lifted by kGlassSaturation and its luminance held to
-// kGlassLuminance, at kGlassTintAlpha.
-static const CGFloat kGlassSaturation = 1.2, kGlassLuminance = 0.18, kGlassTintAlpha = 0.6;
+// The glass's tint: the cover's average color, its saturation lifted, its luminance held down and the whole drawn at an
+// alpha, all three by the Color setting (SGRHomeColor, 0 to 1). At 0 they are 1.2, 0.18 and 0.6, which is white on the
+// title at 4.6:1; at 1 they are 2.0, 0.23 and 0.85, which is 3.8:1, still plenty for a bold title.
+static CGFloat glassSaturation(void) {
+    return 1.2 + 0.8 * SGRHomeColor();
+}
+
+static CGFloat glassLuminance(void) {
+    return 0.18 + 0.05 * SGRHomeColor();
+}
+
+static CGFloat glassTintAlpha(void) {
+    return 0.6 + 0.25 * SGRHomeColor();
+}
 
 static char kSurfaceKey, kImageKey, kShownKey, kGlassKey, kTintKey, kModeKey, kFillKey;
 
@@ -131,9 +142,9 @@ static UIColor *glassTint(UIColor *average) {
     if (!average) return nil;
     CGFloat hue = 0, saturation = 0, brightness = 0, alpha = 1;
     if ([average getHue:&hue saturation:&saturation brightness:&brightness alpha:&alpha]) {
-        average = [UIColor colorWithHue:hue saturation:MIN(1, saturation * kGlassSaturation) brightness:brightness alpha:1];
+        average = [UIColor colorWithHue:hue saturation:MIN(1, saturation * glassSaturation()) brightness:brightness alpha:1];
     }
-    return [SGRHomeDarkened(average, kGlassLuminance) colorWithAlphaComponent:kGlassTintAlpha];
+    return [SGRHomeDarkened(average, glassLuminance()) colorWithAlphaComponent:glassTintAlpha()];
 }
 
 static UIVisualEffectView *glassIn(UIView *tile) {

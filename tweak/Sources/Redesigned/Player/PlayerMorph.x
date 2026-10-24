@@ -101,6 +101,9 @@ static CGFloat screenRadius(void) {
 // Lets -apply: take a progress below 0 or above 1 (up to 0.3 either way) as the sheet swelling past the card or the
 // screen; without it the progress is held between them, which is what Spotify's own never leaves.
 - (void)allowOvershoot;
+// 9.1.78's progress never leaves 0...1, so this adds the bounce: opening, the sheet swells past the screen as it arrives and
+// settles back; closing, the card swells past its own size as it lands. Zero at both ends, so a still player is untouched.
+- (CGFloat)bounced:(CGFloat)progress;
 @end
 
 @implementation SGRPlayerMorph {
@@ -115,6 +118,21 @@ static CGFloat screenRadius(void) {
     BOOL _follows;   // 9.1.90: Spotify animates the player's frame and alpha, which the morph then only reads
     BOOL _overshoot; // the progress may leave 0...1 (allowOvershoot)
     CGFloat _lastT;  // the last progress applied, 0 the card and 1 the player
+    CGFloat _lastP;  // the last progress Spotify set (bounced:)
+    BOOL _opening;   // which way it was last going
+}
+
+- (CGFloat)bounced:(CGFloat)progress {
+    if (!_overshoot) return progress;
+    if (progress != _lastP) _opening = progress > _lastP;
+    _lastP = progress;
+    if (progress <= 0 || progress >= 1) return progress;
+    // The Bounce slider's share of the travel, swung once past the end and once back over the last 45% of the way.
+    CGFloat amplitude = 0.28 * SGRMotionBounce() / 100.0;
+    CGFloat u = ((_opening ? progress : 1 - progress) - 0.55) / 0.45;
+    if (u <= 0) return progress;
+    CGFloat swing = amplitude * sin(2 * M_PI * u) * (1 - 0.4 * u);
+    return _opening ? progress + swing : progress - swing;
 }
 
 - (void)allowOvershoot {
@@ -317,7 +335,10 @@ static SGRPlayerMorph *morphFor(SPTBarOverlayPresentationTransition *transition,
     if (!container || !overlay || overlay.superview != container) return nil;
     if (container.traitCollection.horizontalSizeClass == UIUserInterfaceSizeClassRegular) return nil;
     morph = [[SGRPlayerMorph alloc] initWithContainer:container overlay:overlay bar:[transition barSnapshotView] barRest:[transition barFrame]];
-    if (morph) objc_setAssociatedObject(transition, &kMorphKey, morph, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    if (morph) {
+        if (SGEnabled(SGRKeyMotionPlayer)) [morph allowOvershoot];
+        objc_setAssociatedObject(transition, &kMorphKey, morph, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
     return morph;
 }
 
@@ -325,7 +346,7 @@ static SGRPlayerMorph *morphFor(SPTBarOverlayPresentationTransition *transition,
 - (void)setProgress:(double)progress {
     %orig;
     SGRPlayerMorph *morph = morphFor(self, YES);
-    [morph apply:[self progress]];
+    [morph apply:[morph bounced:[self progress]]];
     if (morph) [self tabBarSnapshotView].alpha = 0;
 }
 

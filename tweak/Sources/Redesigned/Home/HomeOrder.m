@@ -15,6 +15,8 @@
 #import "Home.h"
 
 static char kPageKey, kTopKey;
+// Set while the original is asked for everything: it may ask the other method itself, which must not start over.
+static _Thread_local BOOL sAsking;
 static NSMutableDictionary<NSString *, NSValue *> *sOriginals;
 
 static NSString *keyFor(Class cls, SEL sel) {
@@ -41,7 +43,11 @@ static NSArray<UICollectionViewLayoutAttributes *> *everything(UICollectionViewL
     RectFn orig = (RectFn)originalOf(object_getClass(layout), @selector(layoutAttributesForElementsInRect:));
     if (!orig) return @[];
     CGFloat height = layout.collectionView.contentSize.height + 4000;
-    return orig(layout, @selector(layoutAttributesForElementsInRect:), CGRectMake(-1000, -2000, 10000, height)) ?: @[];
+    BOOL was = sAsking;
+    sAsking = YES;
+    NSArray *all = orig(layout, @selector(layoutAttributesForElementsInRect:), CGRectMake(-1000, -2000, 10000, height));
+    sAsking = was;
+    return all ?: @[];
 }
 
 // The attributes with the Top picks cell moved to the top of the page and what was above it down by its height; the same
@@ -88,7 +94,7 @@ static void hookClass(Class cls) {
     sOriginals[keyFor(cls, item)] = [NSValue valueWithPointer:(void *)method_getImplementation(itemMethod)];
     class_replaceMethod(cls, rect, imp_implementationWithBlock(^NSArray *(UICollectionViewLayout *self_, CGRect area) {
         RectFn orig = (RectFn)originalOf(object_getClass(self_), rect);
-        if (!objc_getAssociatedObject(self_, &kPageKey)) return orig(self_, rect, area);
+        if (sAsking || !objc_getAssociatedObject(self_, &kPageKey)) return orig(self_, rect, area);
         NSMutableArray *inside = [NSMutableArray array];
         for (UICollectionViewLayoutAttributes *a in reordered(everything(self_))) {
             if (CGRectIntersectsRect(a.frame, area)) [inside addObject:a];
@@ -98,7 +104,7 @@ static void hookClass(Class cls) {
     class_replaceMethod(cls, item, imp_implementationWithBlock(^UICollectionViewLayoutAttributes *(UICollectionViewLayout *self_, NSIndexPath *path) {
         ItemFn orig = (ItemFn)originalOf(object_getClass(self_), item);
         UICollectionViewLayoutAttributes *own = orig(self_, item, path);
-        if (!own || !isCell(own) || !objc_getAssociatedObject(self_, &kPageKey)) return own;
+        if (sAsking || !own || !isCell(own) || !objc_getAssociatedObject(self_, &kPageKey)) return own;
         for (UICollectionViewLayoutAttributes *a in reordered(everything(self_))) {
             if (isCell(a) && [a.indexPath isEqual:path]) return a;
         }

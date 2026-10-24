@@ -139,10 +139,8 @@ static CGFloat screenRadius(void) {
         });
     }
     if (_dragging) return progress;
-    CGFloat end = _opening ? 1 : 0;
-    if (fabs(progress - end) < 0.002) return end;
     // Spotify's own spring decides when it is over; this one rides the same tap on its own timing, bouncing where Spotify's does not.
-    CFTimeInterval duration = 0.45 * 100.0 / SGRMotionSpeed();
+    CFTimeInterval duration = 0.38 * 100.0 / SGRMotionSpeed();
     CGFloat step = springStep(now - _started, duration, playerDamping());
     return _opening ? step : 1 - step;
 }

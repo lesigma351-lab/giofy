@@ -24,10 +24,11 @@ static const CGFloat kTextInset = 12, kTextGap = 2;
 // How far up the cover the color reaches, as a share of the cover's height.
 static const CGFloat kFadeShare = 0.4;
 
-static char kFaceKey, kImageKey;
+static char kFaceKey, kImageKey, kReactKey;
 
 @interface SGRTopPickFace : UIView
 @property (nonatomic) CGFloat artBottom;
+- (void)setLit:(BOOL)lit;
 @property (nonatomic, weak) UIImage *image;
 @property (nonatomic, readonly) UILabel *title;
 @property (nonatomic, readonly) UILabel *subtitle;
@@ -38,6 +39,7 @@ static char kFaceKey, kImageKey;
 @implementation SGRTopPickFace {
     CAGradientLayer *_fade;
     CALayer *_panel;
+    CAGradientLayer *_shine;
     UIColor *_color;
 }
 
@@ -54,6 +56,16 @@ static char kFaceKey, kImageKey;
     _panel = [CALayer layer];
     [self.layer addSublayer:_fade];
     [self.layer addSublayer:_panel];
+    // The glass: a hairline round the card and a soft diagonal shine that lights on a press.
+    self.layer.borderWidth = 1 / UIScreen.mainScreen.scale;
+    self.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.18].CGColor;
+    _shine = [CAGradientLayer layer];
+    _shine.startPoint = CGPointMake(0, 0);
+    _shine.endPoint = CGPointMake(1, 1);
+    _shine.colors = @[(id)[UIColor colorWithWhite:1 alpha:0.28].CGColor, (id)[UIColor colorWithWhite:1 alpha:0.04].CGColor, (id)UIColor.clearColor.CGColor];
+    _shine.locations = @[@0, @0.35, @0.7];
+    _shine.opacity = 0.35;
+    [self.layer addSublayer:_shine];
     _title = [UILabel new];
     _title.textColor = SGRPrimary();
     _title.lineBreakMode = NSLineBreakByTruncatingTail;
@@ -66,6 +78,14 @@ static char kFaceKey, kImageKey;
     [self applyFonts];
     [self setColor:nil animated:NO];
     return self;
+}
+
+- (void)setLit:(BOOL)lit {
+    CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
+    fade.fromValue = @(_shine.presentationLayer ? _shine.presentationLayer.opacity : _shine.opacity);
+    fade.duration = SGRReduceMotion() ? 0 : 0.25;
+    _shine.opacity = lit ? 1 : 0.35;
+    [_shine addAnimation:fade forKey:@"lit"];
 }
 
 - (void)applyFonts {
@@ -106,6 +126,7 @@ static char kFaceKey, kImageKey;
     [CATransaction setDisableActions:YES];
     _fade.frame = CGRectMake(0, top, size.width, MAX(0, bottom - top));
     _panel.frame = CGRectMake(0, bottom, size.width, MAX(0, size.height - bottom));
+    _shine.frame = self.bounds;
     [CATransaction commit];
 }
 
@@ -161,6 +182,35 @@ static void paint(SGRTopPickFace *face, UIImage *image) {
     if (known) [face setColor:known animated:NO];
 }
 
+// A press squishes the card and lights its glass; the release springs it back. The card is Spotify's control, so its own
+// touch events are listened to and its own handling is left alone.
+static void react(UIView *card, SGRTopPickFace *face) {
+    if (!SGEnabled(SGRKeyHomeCardReact) || objc_getAssociatedObject(card, &kReactKey) || ![card isKindOfClass:UIControl.class]) return;
+    objc_setAssociatedObject(card, &kReactKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    __weak UIView *weakCard = card;
+    __weak SGRTopPickFace *weakFace = face;
+    void (^press)(BOOL) = ^(BOOL down) {
+        UIView *strongCard = weakCard;
+        if (!strongCard || SGRReduceMotion()) return;
+        [weakFace setLit:down];
+        SGRAnimate(SGRMotionPress, ^{ strongCard.transform = down ? CGAffineTransformMakeScale(0.95, 0.95) : CGAffineTransformIdentity; }, nil);
+    };
+    UIControl *control = (UIControl *)card;
+    UIControlEvents down = UIControlEventTouchDown | UIControlEventTouchDragEnter;
+    UIControlEvents up = UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel | UIControlEventTouchDragExit;
+    [control addAction:[UIAction actionWithHandler:^(__kindof UIAction *action) { press(YES); }] forControlEvents:down];
+    [control addAction:[UIAction actionWithHandler:^(__kindof UIAction *action) { press(NO); }] forControlEvents:up];
+    // A card springs in the first time it is drawn.
+    if (SGRReduceMotion()) return;
+    card.alpha = 0;
+    card.transform = CGAffineTransformMakeScale(0.88, 0.88);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIView *strongCard = weakCard;
+        if (!strongCard) return;
+        SGRAnimate(SGRMotionLayout, ^{ strongCard.alpha = 1; strongCard.transform = CGAffineTransformIdentity; }, nil);
+    });
+}
+
 BOOL SGRHomeStyleTopPick(UIView *card) {
     SGRTopPickFace *face = objc_getAssociatedObject(card, &kFaceKey);
     if (!SGRHomeTopPicksShelfAround(card)) {
@@ -177,6 +227,7 @@ BOOL SGRHomeStyleTopPick(UIView *card) {
     if (face.superview != card) [card addSubview:face];
     else if (card.subviews.lastObject != face) [card bringSubviewToFront:face];
     if (face.hidden) face.hidden = NO;
+    react(card, face);
     if (!CGRectEqualToRect(face.frame, card.bounds)) face.frame = card.bounds;
 
     UIView *holder = SGRFindByIdentifier(card, @"Encore.ImageView", &kImageKey);

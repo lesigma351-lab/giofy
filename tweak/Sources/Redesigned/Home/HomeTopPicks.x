@@ -24,7 +24,15 @@
 #import "Redesigned/Kit/SGRKit.h"
 #import "Home.h"
 
-static const CGFloat kScale = 1.7, kSmallest = 120, kHeading = 40;
+static const CGFloat kSmallest = 120, kHeading = 40;
+
+// How much larger the cards are drawn: the Card size setting (HomeSettings.m), 170% to begin with.
+static CGFloat cardScale(void) {
+    static CGFloat scale;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ scale = MAX(120, MIN(220, SGInt(SGRKeyHomeCardSize, 170))) / 100.0; });
+    return scale;
+}
 static const NSInteger kFewest = 3;
 static char kLargeKey, kNaturalKey, kWrappedKey;
 static _Thread_local BOOL sg_enlarging;
@@ -129,11 +137,11 @@ static CGPoint snapped(UICollectionViewLayout *layout, CGPoint proposed, CGPoint
 
 %hook NSCollectionLayoutDimension
 + (instancetype)absoluteDimension:(CGFloat)dimension {
-    if (sg_enlarging && dimension >= kSmallest) dimension = round(dimension * kScale);
+    if (sg_enlarging && dimension >= kSmallest) dimension = round(dimension * cardScale());
     return %orig(dimension);
 }
 + (instancetype)estimatedDimension:(CGFloat)dimension {
-    if (sg_enlarging && dimension >= kSmallest) dimension = round(dimension * kScale);
+    if (sg_enlarging && dimension >= kSmallest) dimension = round(dimension * cardScale());
     return %orig(dimension);
 }
 %end
@@ -201,7 +209,7 @@ static void setLarge(UICollectionView *shelf, BOOL large) {
         result = %orig;
         // Spotify's measuring may not follow the cards (a fixed height of its own): the large shelf then gets the
         // heading and the cards scaled, so the cards never spill over the next section.
-        CGFloat scaled = round(kHeading + (before - kHeading) * kScale);
+        CGFloat scaled = round(kHeading + (before - kHeading) * cardScale());
         if (large && result.size.height < scaled - 1) result.size = CGSizeMake(result.size.width, scaled);
         static dispatch_once_t once;
         dispatch_once(&once, ^{

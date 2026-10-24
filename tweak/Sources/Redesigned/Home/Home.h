@@ -28,6 +28,11 @@
 // How vivid Home's cover tints are, 0 to 100 on a slider (HomeSettings.m), 40 to begin with. Shortcut tiles and Top picks
 // cards take it when they are drawn, so a change shows after a restart.
 #define SGRKeyHomeColor @"spotifyglass.redesign.home.color"
+// How large Top picks cards are drawn, in percent of Spotify's size, 120 to 220 on a slider (HomeSettings.m), 170 to begin with.
+#define SGRKeyHomeCardSize @"spotifyglass.redesign.home.cardSize"
+// Top picks cards that react: a press squishes the card and lights its glass, and a card springs in as it first appears
+// (HomeTopPickCard.m). On until switched off.
+#define SGRKeyHomeCardReact @"spotifyglass.redesign.home.cardReact"
 @class SGModRow;
 NSArray<SGModRow *> *SGRHomeAppearanceRows(void);   // for the Appearance page (App/Pages.m)
 // The Color setting as 0...1 (HomeCoverColor.x).

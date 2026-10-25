@@ -111,11 +111,16 @@ static CGFloat screenRadius(void) {
 // 9.1.78's progress never leaves 0...1, so a tap runs the mod's own timed spring in its place (a drag is left to the finger):
 // opening, the sheet swells past the screen as it arrives and settles; closing, the card swells past its size as it lands.
 - (CGFloat)timed:(CGFloat)progress;
+// Spotify's transition has ended: how long it ran is kept for the next spring.
+- (void)noteSpotifyRan;
 @end
 
 // What is behind the player, taken when it opens: the closing player is drawn over this, so nothing flat shows
 // through once the sheet has faded to the card and Spotify has not yet put the page back.
 static UIImage *sHomeShot;
+// How long Spotify's own transition ran last time, opening [1] and closing [0]: the spring is as long, so it is over as Spotify's
+// is and is never cut short mid-bounce.
+static CFTimeInterval sSpotifyRan[2];
 static BOOL sOpeningHint;
 
 @implementation SGRPlayerMorph {
@@ -152,9 +157,15 @@ static BOOL sOpeningHint;
     }
     if (_dragging) return progress;
     // Spotify's own spring decides when it is over; this one rides the same tap on its own timing, bouncing where Spotify's does not.
-    CFTimeInterval duration = 0.42 * 100.0 / SGRMotionSpeed();
+    // The first one has nothing measured yet. A faster setting shortens it; a slower one cannot outlast Spotify's, which ends it.
+    CFTimeInterval ran = sSpotifyRan[_opening ? 1 : 0];
+    CFTimeInterval duration = (ran > 0 ? ran * 0.96 : 0.4) * MIN(1.0, 100.0 / (double)SGRMotionSpeed());
     CGFloat step = springStep(now - _started, duration, _opening ? openDamping() : playerDamping());
     return _opening ? step : 1 - step;
+}
+
+- (void)noteSpotifyRan {
+    if (_began && !_dragging) sSpotifyRan[_opening ? 1 : 0] = MAX(0.2, MIN(1.2, CACurrentMediaTime() - _started));
 }
 
 - (void)allowOvershoot {
@@ -406,6 +417,7 @@ static SGRPlayerMorph *morphFor(SPTBarOverlayPresentationTransition *transition,
 - (void)destroyTransitioningContext {
     SGRPlayerMorph *morph = morphFor(self, NO);
     if (morph) {
+        [morph noteSpotifyRan];
         [morph tearDown];
         objc_setAssociatedObject(self, &kMorphKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }

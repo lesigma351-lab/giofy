@@ -104,11 +104,12 @@ static void refreshToggles(BOOL animated) {
     SPTPlayerState *state = SGPlayerState();
     SGRGlyphView *shuffle = sg_shuffleGlyph, *repeat = sg_repeatGlyph;
     if (!state || (!shuffle && !repeat)) return;
+    SPTPlayerOptions *options = state.options;
     UIColor *lit = SGRAccentColor() ?: UIColor.systemGreenColor;
-    shuffle.tintColor = state.shufflingContext ? lit : SGRSecondary();
+    shuffle.tintColor = options.shufflingContext ? lit : SGRSecondary();
     if (repeat) {
-        [repeat setSymbol:state.repeatingTrack ? @"repeat.1" : @"repeat" animated:animated];
-        repeat.tintColor = (state.repeatingContext || state.repeatingTrack) ? lit : SGRSecondary();
+        [repeat setSymbol:options.repeatingTrack ? @"repeat.1" : @"repeat" animated:animated];
+        repeat.tintColor = (options.repeatingContext || options.repeatingTrack) ? lit : SGRSecondary();
     }
 }
 

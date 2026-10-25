@@ -53,6 +53,7 @@ static void showState(UIButton *button) {
     BOOL saved = button.isSelected;
     BOOL replaced = player || (saved && SGRPlainCheckOn());
     UIImageView *check = objc_getAssociatedObject(button, &kCheckKey);
+    BOOL popped = NO;
     if (replaced && !check) {
         check = [UIImageView new];
         check.accessibilityIdentifier = SGRPlainCheckIdentifier;
@@ -62,11 +63,14 @@ static void showState(UIButton *button) {
         objc_setAssociatedObject(button, &kCheckKey, check, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     if (check && replaced) {
-        UIImageSymbolConfiguration *configuration = [UIImageSymbolConfiguration configurationWithPointSize:saved ? kCheckSize : 22 weight:UIImageSymbolWeightBold];
-        NSString *name = saved ? @"checkmark" : @"plus";
-        if (![objc_getAssociatedObject(check, &kCheckKey) isEqual:name]) {
+        UIImageSymbolConfiguration *configuration = [UIImageSymbolConfiguration configurationWithPointSize:saved ? kCheckSize : 26 weight:saved ? UIImageSymbolWeightBold : UIImageSymbolWeightRegular];
+        NSString *name = saved ? @"checkmark" : @"plus.circle";
+        NSString *before = objc_getAssociatedObject(check, &kCheckKey);
+        if (![before isEqual:name]) {
             objc_setAssociatedObject(check, &kCheckKey, name, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             check.image = [UIImage systemImageNamed:name withConfiguration:configuration];
+            // A save or an unsave pops the new glyph in on the spring, as the Music app's does.
+            popped = before != nil && check.window && !SGRReduceMotion();
         }
         check.tintColor = saved ? SGRAccent() : [UIColor colorWithWhite:1 alpha:0.9];
     }
@@ -77,6 +81,14 @@ static void showState(UIButton *button) {
     // does not reset the way it resets the alpha.
     animation.alpha = replaced ? 0 : 1;
     animation.layer.hidden = replaced;
+    if (popped) {
+        check.transform = CGAffineTransformMakeScale(0.4, 0.4);
+        check.alpha = 0;
+        SGRAnimate(SGRMotionRespond, ^{
+            check.transform = CGAffineTransformIdentity;
+            check.alpha = 1;
+        }, nil);
+    }
 }
 
 %hook UIButton

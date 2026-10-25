@@ -43,6 +43,8 @@
 // How strong the Home wash is, 0 to 100 (HomeWash.m), 95 to begin with, and how far down the page it reaches in points, 620 to begin with.
 #define SGRKeyHomeWashStrength @"spotifyglass.redesign.home.washStrength"
 #define SGRKeyHomeWashDepth @"spotifyglass.redesign.home.washDepth"
+// Whether the "Top Picks" heading shows over the cards (HomeHeadings.x). On until switched off.
+#define SGRKeyHomeTopTitle @"spotifyglass.redesign.home.topTitle"
 @class SGModRow;
 NSArray<SGModRow *> *SGRHomeAppearanceRows(void);   // for the Appearance page (App/Pages.m)
 NSArray<SGModRow *> *SGRHomeGioRows(void);          // the rows that are Gio's additions (App/Gio.m)

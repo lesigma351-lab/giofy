@@ -86,6 +86,11 @@ static void restyle(UIView *button) {
         mine.translatesAutoresizingMaskIntoConstraints = NO;
         objc_setAssociatedObject(button, &kTitleKey, mine, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
+    if (SGRHomeTopPicksShelfAround(heading) && !SGEnabled(SGRKeyHomeTopTitle)) {
+        mine.hidden = YES;
+        if (theirs.alpha != 0) theirs.alpha = 0;
+        return;
+    }
     BOOL added = mine.superview != button;
     if (added) [button addSubview:mine];
     mine.hidden = NO;

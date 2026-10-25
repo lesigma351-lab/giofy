@@ -22,6 +22,7 @@ NSArray<SGModRow *> *SGRHomeGioRows(void) {
         SGWithSymbol(SGSliderRow(@"Card size", @"How large Top picks cards are drawn, against Spotify's own size. Restart to apply.", 120, 220, 10,
                                  ^double { return (double)SGInt(SGRKeyHomeCardSize, 170); },
                                  ^(double value) { SGSetInt(SGRKeyHomeCardSize, (NSInteger)value); }, ^NSString *(double value) { return percent(value); }), @"arrow.up.left.and.arrow.down.right"),
+        SGWithSymbol(SGSwitchRow(@"Top Picks heading", @"The title over the Top picks cards. Restart to apply.", SGRKeyHomeTopTitle), @"textformat"),
         SGWithSymbol(SGSwitchRow(@"Reactive cards", @"Top picks cards squish and shine on touch, and spring in", SGRKeyHomeCardReact), @"hand.tap"),
         SGWithSymbol(SGSliderRow(@"Card squish", @"How far a card shrinks under your finger.", 0, 25, 1,
                                  ^double { return (double)SGInt(SGRKeyHomeCardSquish, 9); },

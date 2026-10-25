@@ -34,26 +34,49 @@ static UIView *animationIn(UIButton *button) {
     return found;
 }
 
+// The player's like (Apple Music icons on, Player settings): both of its states are the mod's glyph, a plus and a tick, since
+// Spotify's unsaved plus is drawn mid-animation as an asterisk in a circle on some phones. The key is Player.h's own.
+static NSString *const kAppleIconsKey = @"spotifyglass.redesign.player.appleIcons";
+
+static BOOL inPlayer(UIView *view) {
+    NSUInteger depth = 0;
+    for (UIView *up = view.superview; up && depth < 12; up = up.superview, depth++) {
+        if ([up.accessibilityIdentifier isEqualToString:@"npv.bottomStackView"]) return YES;
+    }
+    return NO;
+}
+
 static void showState(UIButton *button) {
     UIView *animation = animationIn(button);
     if (!animation) return;
-    UIImageView *check = objc_getAssociatedObject(button, &kCheckKey);
+    BOOL player = SGEnabled(kAppleIconsKey) && inPlayer(button);
     BOOL saved = button.isSelected;
-    if (saved && !check) {
-        UIImageSymbolConfiguration *configuration = [UIImageSymbolConfiguration configurationWithPointSize:kCheckSize weight:UIImageSymbolWeightBold];
-        check = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"checkmark" withConfiguration:configuration]];
-        check.tintColor = SGRAccent();
+    BOOL replaced = player || (saved && SGRPlainCheckOn());
+    UIImageView *check = objc_getAssociatedObject(button, &kCheckKey);
+    if (replaced && !check) {
+        check = [UIImageView new];
         check.accessibilityIdentifier = SGRPlainCheckIdentifier;
         check.contentMode = UIViewContentModeCenter;
         check.userInteractionEnabled = NO;
         check.isAccessibilityElement = NO;
         objc_setAssociatedObject(button, &kCheckKey, check, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
+    if (check && replaced) {
+        UIImageSymbolConfiguration *configuration = [UIImageSymbolConfiguration configurationWithPointSize:saved ? kCheckSize : 22 weight:UIImageSymbolWeightBold];
+        NSString *name = saved ? @"checkmark" : @"plus";
+        if (![objc_getAssociatedObject(check, &kCheckKey) isEqual:name]) {
+            objc_setAssociatedObject(check, &kCheckKey, name, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            check.image = [UIImage systemImageNamed:name withConfiguration:configuration];
+        }
+        check.tintColor = saved ? SGRAccent() : [UIColor colorWithWhite:1 alpha:0.9];
+    }
     if (check && check.superview != button) [button addSubview:check];
     check.frame = button.bounds;
-    check.alpha = saved ? 1 : 0;
-    // Alpha, not hidden: Lottie's own state keeps running under it.
-    animation.alpha = saved ? 0 : 1;
+    check.alpha = replaced ? 1 : 0;
+    // Alpha, not hidden: Lottie's own state keeps running under it. The layer goes out of sight as well, which Spotify
+    // does not reset the way it resets the alpha.
+    animation.alpha = replaced ? 0 : 1;
+    animation.layer.hidden = replaced;
 }
 
 %hook UIButton
@@ -69,6 +92,6 @@ static void showState(UIButton *button) {
 %end
 
 %ctor {
-    if (!SGRedesignedUI() || !SGRPlainCheckOn()) return;
+    if (!SGRedesignedUI() || !(SGRPlainCheckOn() || SGEnabled(kAppleIconsKey))) return;
     %init;
 }

@@ -83,6 +83,24 @@ static UICollectionViewCompositionalLayoutSectionProvider wrapped(UICollectionVi
         // One card at a time, where the section scrolls across on its own.
         if (large && made && made.orthogonalScrollingBehavior != UICollectionLayoutSectionOrthogonalScrollingBehaviorNone) {
             made.orthogonalScrollingBehavior = UICollectionLayoutSectionOrthogonalScrollingBehaviorGroupPaging;
+            // Paging goes a group at a time, so a group holding several cards pages past them all: one card to a group.
+            @try {
+                NSCollectionLayoutGroup *group = [made valueForKey:@"group"];
+                NSCollectionLayoutItem *first = [group.subitems.firstObject isKindOfClass:NSCollectionLayoutItem.class] ? group.subitems.firstObject : nil;
+                static BOOL logged;
+                if (!logged) {
+                    logged = YES;
+                    SGLog(@"redesign home: top picks section pages %@ groups of %lu, group %@, first %@", @(made.orthogonalScrollingBehavior), (unsigned long)group.subitems.count,
+                          NSStringFromCGSize(CGSizeMake(group.layoutSize.widthDimension.dimension, group.layoutSize.heightDimension.dimension)),
+                          first ? NSStringFromCGSize(CGSizeMake(first.layoutSize.widthDimension.dimension, first.layoutSize.heightDimension.dimension)) : @"-");
+                }
+                if (first && group.subitems.count > 1 && first.layoutSize.widthDimension.isAbsolute) {
+                    NSCollectionLayoutGroup *one = [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:first.layoutSize subitems:@[first]];
+                    one.contentInsets = group.contentInsets;
+                    [made setValue:one forKey:@"group"];
+                }
+            } @catch (NSException *e) {
+            }
         }
         return made;
     };
@@ -192,6 +210,8 @@ static void setLarge(UICollectionView *shelf, BOOL large) {
     [layout invalidateLayout];
     [shelf layoutIfNeeded];
     shelf.alwaysBounceVertical = NO;
+    // A fling dies sooner, so the cards go a few at a time at most where the shelf scrolls itself.
+    shelf.decelerationRate = UIScrollViewDecelerationRateFast;
     relayout(shelf);
 }
 

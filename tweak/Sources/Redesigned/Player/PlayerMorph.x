@@ -106,10 +106,15 @@ static CGFloat screenRadius(void) {
 - (CGFloat)timed:(CGFloat)progress;
 @end
 
+// What is behind the player, taken when it opens: the closing player is drawn over this, so nothing flat shows
+// through once the sheet has faded to the card and Spotify has not yet put the page back.
+static UIImage *sHomeShot;
+static BOOL sOpeningHint;
+
 @implementation SGRPlayerMorph {
     __weak UIView *_container, *_overlay, *_bar;
     UIView *_sheet;
-    UIImageView *_cover;
+    UIImageView *_cover, *_home;
     CALayer *_mask;
     CGRect _card, _barArtwork, _barRest, _spotifyFrame;
     CGFloat _cardRadius, _spotifyAlpha;
@@ -174,12 +179,31 @@ static CGFloat screenRadius(void) {
     _barArtwork = SGRNowPlayingArtworkFrameIn(container);
     _spotifyAlpha = overlay.alpha;
 
+    UIWindow *window = container.window;
+    if (window && sOpeningHint) {
+        // The player, its stand-ins and the bar are left out, so the picture is the page and the tab bar's room only.
+        BOOL overlayHidden = overlay.hidden, barHidden = bar.hidden;
+        overlay.hidden = YES;
+        bar.hidden = YES;
+        UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithBounds:window.bounds];
+        sHomeShot = [renderer imageWithActions:^(UIGraphicsImageRendererContext *ctx) {
+            [window drawViewHierarchyInRect:window.bounds afterScreenUpdates:NO];
+        }];
+        overlay.hidden = overlayHidden;
+        bar.hidden = barHidden;
+    }
     _sheet = [[UIView alloc] initWithFrame:card];
     _sheet.userInteractionEnabled = NO;
     _sheet.backgroundColor = SGRPlayerField().fieldColor ?: UIColor.blackColor;
     _sheet.layer.cornerCurve = kCACornerCurveContinuous;
     _sheet.clipsToBounds = YES;
     [container insertSubview:_sheet belowSubview:overlay];
+    if (sHomeShot) {
+        _home = [[UIImageView alloc] initWithImage:sHomeShot];
+        _home.userInteractionEnabled = NO;
+        _home.frame = container.bounds;
+        [container insertSubview:_home belowSubview:_sheet];
+    }
 
     // The player's own paint is not a sublayer, so the content's transform would leave it where Spotify
     // put the player, a band below the sheet's top edge; the sheet paints instead.
@@ -219,6 +243,13 @@ static CGFloat screenRadius(void) {
     _lastT = t;
     _spotifyAlpha = overlay.alpha;
     _spotifyFrame = overlay.frame;
+    static BOOL loggedFlat;
+    if (t < 0.01 && !loggedFlat && !_follows) {
+        loggedFlat = YES;
+        NSMutableString *tree = [NSMutableString string];
+        for (UIView *v in container.subviews) [tree appendFormat:@"%@ a=%.2f h=%d %@ | ", NSStringFromClass(v.class), v.alpha, v.hidden, NSStringFromCGRect(v.frame)];
+        SGLog(@"player morph: at the card, container bg %@, subviews %@", container.backgroundColor, tree);
+    }
 
     if (_follows) {
         // Where Spotify's animation has the player now: its frame's model value is already the end.
@@ -329,6 +360,7 @@ static CGFloat screenRadius(void) {
     _overlayColor = NULL;
     [_sheet removeFromSuperview];
     [_cover removeFromSuperview];
+    [_home removeFromSuperview];
     [CATransaction commit];
     if (_coverHidden) SGRPlayerSetCoverHidden(NO);
     _coverHidden = NO;
@@ -346,7 +378,9 @@ static SGRPlayerMorph *morphFor(SPTBarOverlayPresentationTransition *transition,
     UIView *container = context.containerView, *overlay = [transition overlayView];
     if (!container || !overlay || overlay.superview != container) return nil;
     if (container.traitCollection.horizontalSizeClass == UIUserInterfaceSizeClassRegular) return nil;
+    sOpeningHint = [transition progress] < 0.5;
     morph = [[SGRPlayerMorph alloc] initWithContainer:container overlay:overlay bar:[transition barSnapshotView] barRest:[transition barFrame]];
+    sOpeningHint = NO;
     if (morph) {
         if (SGEnabled(SGRKeyMotionPlayer)) [morph allowOvershoot];
         objc_setAssociatedObject(transition, &kMorphKey, morph, OBJC_ASSOCIATION_RETAIN_NONATOMIC);

@@ -13,6 +13,17 @@
 // into the row, so a change shows the next time the bar minimizes.
 #define SGRKeyBarInlineConnect @"spotifyglass.redesign.nowPlayingBar.inlineConnect"
 
+// The artist under the title on the card in the minimized tab bar's row (NowPlayingBar.x), as in the Music app's mini
+// player: on until switched off. The progress line under the text in that row: off until switched on.
+#define SGRKeyBarRowArtist @"spotifyglass.redesign.nowPlayingBar.rowArtist"
+#define SGRKeyBarRowProgress @"spotifyglass.redesign.nowPlayingBar.rowProgress"
+// How much the bar pops as the player lands in it, 0 to 100, 60 to begin with (SGRNowPlayingBarLand).
+#define SGRKeyBarBounce @"spotifyglass.redesign.nowPlayingBar.bounce"
+// The bar's rows that are Gio's additions (App/Gio.m).
+NSArray<SGModRow *> *SGRBarGioRows(void);
+// The bar swells and springs back as the player closes into it: called as the player lands (Player/PlayerMorph.x).
+void SGRNowPlayingBarLand(void);
+
 // The bar's rows, the Mini player section of the Player page (Redesigned/Player/PlayerSettings.m): Apple
 // Music style (the tab bar's Minimize on scroll, Redesigned/Navbar/Navbar.h), the device button in that
 // row, and the device button hidden on the full card.

@@ -299,6 +299,8 @@ static CGFloat screenRadius(void) {
 
 - (void)tearDown {
     UIView *overlay = _overlay;
+    // The player has closed into the bar: the bar pops, once Spotify has put it back.
+    if (_lastT < 0.5) dispatch_async(dispatch_get_main_queue(), ^{ SGRNowPlayingBarLand(); });
     // 9.1.90, closing: the glass bar is put back under the sheet and the sheet and the flown cover fade into it,
     // rather than the dark card giving way to the glass in one frame.
     if (_follows && _lastT < 0.5) {

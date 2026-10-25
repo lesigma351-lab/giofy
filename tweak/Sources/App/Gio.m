@@ -8,6 +8,7 @@
 #import "Redesigned/Home/Home.h"
 #import "Redesigned/Library/Library.h"
 #import "Redesigned/Player/Player.h"
+#import "Redesigned/NowPlayingBar/NowPlayingBar.h"
 #import "Pages.h"
 
 // The view tree under the player's classes, for working out where its buttons are: class, identifier and frame, indented.
@@ -50,6 +51,7 @@ SGModSection *SGGioSection(void) {
     [looks addObjectsFromArray:SGRGioMotionRows()];
     [looks addObjectsFromArray:SGRHomeGioRows()];
     [looks addObjectsFromArray:SGRPlayerGioRows()];
+    [looks addObjectsFromArray:SGRBarGioRows()];
     [looks addObjectsFromArray:SGRLibraryAppearanceRows()];
     for (SGModRow *row in looks) row.visible = redesigned;
     [rows addObjectsFromArray:looks];

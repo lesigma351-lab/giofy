@@ -295,7 +295,7 @@ static char kTextKey;
     [super layoutSubviews];
     CGSize size = self.bounds.size;
     CGFloat titleHeight = ceil(_title.font.lineHeight), artistsHeight = ceil(_artists.font.lineHeight);
-    BOOL two = !_inRow && _artists.text.length;
+    BOOL two = (!_inRow || SGEnabled(SGRKeyBarRowArtist)) && _artists.text.length;
     // The lines share 2pt of their leading, set as close as the Music app sets its card's.
     CGFloat shared = 2;
     CGFloat top = round((size.height - titleHeight - (two ? artistsHeight - shared : 0)) / 2);
@@ -382,6 +382,12 @@ static void placeText(UIView *page) {
 }
 
 static void placeTexts(UIView *bar) {
+    // The progress line under the text stays off the card in the tab bar's row unless asked for.
+    UIView *progress = sg_progress;
+    if (progress) {
+        CGFloat want = sg_inline && !SGFlag(SGRKeyBarRowProgress, NO) ? 0 : 1;
+        if (progress.alpha != want) progress.alpha = want;
+    }
     SGForEachView(bar, ^(UIView *v) {
         NSString *name = v.accessibilityIdentifier;
         if ([name isEqualToString:kPageId]) placeText(v);
@@ -419,6 +425,17 @@ static void placeInline(UIViewController *container) {
         for (UIView *v = view.superview; v; v = v.superview) if (v.clipsToBounds) [clips appendFormat:@" %@", v.class];
         SGLog(@"now playing bar in the tab bar's row at %@, clipped by:%@", NSStringFromCGRect(slot), clips.length ? clips : @" nothing");
     });
+}
+
+void SGRNowPlayingBarLand(void) {
+    NSInteger amount = MAX(0, MIN(100, SGInt(SGRKeyBarBounce, 60)));
+    UIView *view = sg_container.viewIfLoaded;
+    if (!view || !view.window || amount == 0 || SGRReduceMotion()) return;
+    // The card swells at once and springs back, on top of whatever the row has put on the view (its move into the slot).
+    CGAffineTransform rest = view.transform;
+    CGFloat swell = 1 + 0.14 * amount / 100.0;
+    view.transform = CGAffineTransformScale(rest, swell, swell);
+    SGRAnimate(SGRMotionPress, ^{ view.transform = rest; }, nil);
 }
 
 void SGRNowPlayingBarFollowTabBar(void) {

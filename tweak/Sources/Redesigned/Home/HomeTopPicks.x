@@ -152,6 +152,85 @@ static CGPoint snapped(UICollectionViewLayout *layout, CGPoint proposed, CGPoint
     return CGPointMake(MIN(MAX(best, -inset), most), proposed.y);
 }
 
+// One card to a swipe, whatever Spotify's paging does: a pan of any scroll view in the Top picks shelf that scrolls across
+// is watched, and where it lets go the shelf is taken to the card before or after the one it began on (a fling or a drag
+// of a third of a card), else back to the nearest. Spotify's own deceleration is stopped where it is and the mod's spring
+// carries the shelf on, so a hard swipe never runs past the next card.
+@interface SGROneByOne : NSObject
+@property (nonatomic, weak) UICollectionView *shelf;
+@property (nonatomic, weak) UIScrollView *scroll;
+@property (nonatomic) CGFloat start;
+@end
+
+static NSArray<NSNumber *> *cardEdges(UIScrollView *scroll) {
+    NSMutableArray<NSNumber *> *edges = [NSMutableArray array];
+    CGFloat inset = scroll.adjustedContentInset.left;
+    SGForEachView(scroll, ^(UIView *view) {
+        if (![view isKindOfClass:UICollectionViewCell.class] || view.hidden) return;
+        CGFloat x = round([scroll convertRect:view.bounds fromView:view].origin.x - inset);
+        for (NSNumber *known in edges) if (fabs(known.doubleValue - x) < 2) return;
+        [edges addObject:@(x)];
+    });
+    [edges sortUsingSelector:@selector(compare:)];
+    return edges;
+}
+
+@implementation SGROneByOne
+- (void)pan:(UIPanGestureRecognizer *)pan {
+    UIScrollView *scroll = self.scroll;
+    if (!scroll || scroll.contentSize.width <= scroll.bounds.size.width + 1 || !SGRHomeShelfIsTopPicks(self.shelf)) return;
+    if (pan.state == UIGestureRecognizerStateBegan) {
+        self.start = scroll.contentOffset.x;
+        return;
+    }
+    if (pan.state != UIGestureRecognizerStateEnded && pan.state != UIGestureRecognizerStateCancelled) return;
+    CGFloat velocity = [pan velocityInView:scroll].x, start = self.start;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSArray<NSNumber *> *edges = cardEdges(scroll);
+        if (edges.count < 2) return;
+        CGFloat current = scroll.contentOffset.x, width = [edges[1] doubleValue] - [edges[0] doubleValue];
+        // The card it began on, and the one it goes to.
+        NSInteger from = 0;
+        for (NSInteger i = 0; i < (NSInteger)edges.count; i++) if (fabs(edges[i].doubleValue - start) < fabs(edges[from].doubleValue - start)) from = i;
+        NSInteger to = from;
+        if (velocity < -150 || current - start > width / 3) to = from + 1;
+        else if (velocity > 150 || start - current > width / 3) to = from - 1;
+        else {
+            for (NSInteger i = 0; i < (NSInteger)edges.count; i++) if (fabs(edges[i].doubleValue - current) < fabs(edges[to].doubleValue - current)) to = i;
+        }
+        to = MAX(0, MIN((NSInteger)edges.count - 1, to));
+        CGFloat most = MAX(-scroll.adjustedContentInset.left, scroll.contentSize.width + scroll.adjustedContentInset.right - scroll.bounds.size.width);
+        CGFloat target = MIN(MAX(edges[to].doubleValue, -scroll.adjustedContentInset.left), most);
+        // Stopped where it is, then carried to the card.
+        [scroll setContentOffset:scroll.contentOffset animated:NO];
+        [UIView animateWithDuration:0.5 delay:0 usingSpringWithDamping:0.88 initialSpringVelocity:0
+                            options:UIViewAnimationOptionAllowUserInteraction | UIViewAnimationOptionBeginFromCurrentState
+                         animations:^{ scroll.contentOffset = CGPointMake(target, scroll.contentOffset.y); } completion:nil];
+    });
+}
+@end
+
+static char kOneByOneKey;
+
+// Watches every scroll view in the shelf once; the orthogonal scroller of a section is made after the shelf lays out.
+static void watchShelf(UICollectionView *shelf) {
+    __weak UICollectionView *weak = shelf;
+    void (^install)(void) = ^{
+        UICollectionView *strong = weak;
+        if (!strong) return;
+        SGForEachView(strong, ^(UIView *view) {
+            if (![view isKindOfClass:UIScrollView.class] || objc_getAssociatedObject(view, &kOneByOneKey)) return;
+            SGROneByOne *watcher = [SGROneByOne new];
+            watcher.shelf = strong;
+            watcher.scroll = (UIScrollView *)view;
+            objc_setAssociatedObject(view, &kOneByOneKey, watcher, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            [((UIScrollView *)view).panGestureRecognizer addTarget:watcher action:@selector(pan:)];
+        });
+    };
+    dispatch_async(dispatch_get_main_queue(), install);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.6 * NSEC_PER_SEC)), dispatch_get_main_queue(), install);
+}
+
 %hook UICollectionViewCompositionalLayout
 - (instancetype)initWithSectionProvider:(UICollectionViewCompositionalLayoutSectionProvider)provider
                           configuration:(UICollectionViewCompositionalLayoutConfiguration *)configuration {
@@ -240,7 +319,10 @@ static void setLarge(UICollectionView *shelf, BOOL large) {
         return result;
     }
     if (index < sg_topIndex) sg_topIndex = index;
-    if (index == sg_topIndex) SGRHomeOrderWatch(root);
+    if (index == sg_topIndex) {
+        SGRHomeOrderWatch(root);
+        watchShelf((UICollectionView *)root);
+    }
     BOOL large = index == sg_topIndex, was = objc_getAssociatedObject(layout, &kLargeKey) != nil;
     if (large != was) {
         // This measuring was of the cards at their old size. The height before is this section's own, never one

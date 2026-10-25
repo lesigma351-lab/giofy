@@ -24,3 +24,4 @@ BOOL SGRPlainCheckOn(void);
 
 @class SGModRow;
 NSArray<SGModRow *> *SGRAppearanceRows(void);   // the accent color, for the Appearance page
+NSArray<SGModRow *> *SGRGioMotionRows(void);    // the motion presets and sliders, for Gio's additions (App/Gio.m)

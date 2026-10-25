@@ -44,6 +44,12 @@
 
 // What is behind the player, chosen on the Player page (PlayerSettings.m).
 // SGRKeyPlayerMotion is the switch the choice replaced: until a choice is stored, it picks Still or Colors.
+// Apple Music's shuffle and repeat glyphs over Spotify's on the player's row of controls, lit in the accent while on
+// (PlayerControls.x). On until switched off, read when the controls lay out; a change needs a restart.
+#define SGRKeyAppleIcons @"spotifyglass.redesign.player.appleIcons"
+// The player's rows that are Gio's additions (App/Gio.m).
+@class SGModRow;
+NSArray<SGModRow *> *SGRPlayerGioRows(void);
 #define SGRKeyPlayerBackground @"spotifyglass.redesign.player.background"
 #define SGRKeyPlayerMotion @"spotifyglass.redesign.player.movingBackground"
 typedef NS_ENUM(NSInteger, SGRPlayerBackgroundKind) {

@@ -31,7 +31,8 @@ static const NSTimeInterval kSpinnerCheck = 0.6;
 // one sent before the player caught up, for this long; after it the player's word is final.
 static const NSTimeInterval kTapTrust = 1.2;
 
-static char kPreviousKey, kNextKey, kPlayKey, kGlyphKey, kTakeKey, kRemainingKey;
+static char kPreviousKey, kNextKey, kPlayKey, kGlyphKey, kTakeKey, kRemainingKey, kShuffleKey, kRepeatKey;
+static __weak SGRGlyphView *sg_shuffleGlyph, *sg_repeatGlyph;
 static __weak UIView *sg_playView;
 static __weak UIButton *sg_playButton;
 static CFTimeInterval sg_tappedUntil;
@@ -93,6 +94,39 @@ static void skipGlyph(UIView *host, NSString *identifier, const void *findKey, N
         if (view != glyph && [view isKindOfClass:icon]) SGRPlayerVanish(view);
     });
     keepOnTop(glyph, content);
+}
+
+#pragma mark - shuffle and repeat
+
+// Lit in the accent while shuffle or repeat is on, the player's word for it (shufflingContext, repeatingContext,
+// repeatingTrack); repeat one is a repeat with a 1 in it, as the Music app draws it.
+static void refreshToggles(BOOL animated) {
+    SPTPlayerState *state = SGPlayerState();
+    SGRGlyphView *shuffle = sg_shuffleGlyph, *repeat = sg_repeatGlyph;
+    if (!state || (!shuffle && !repeat)) return;
+    UIColor *lit = SGRAccentColor() ?: UIColor.systemGreenColor;
+    shuffle.tintColor = state.shufflingContext ? lit : SGRSecondary();
+    if (repeat) {
+        [repeat setSymbol:state.repeatingTrack ? @"repeat.1" : @"repeat" animated:animated];
+        repeat.tintColor = (state.repeatingContext || state.repeatingTrack) ? lit : SGRSecondary();
+    }
+}
+
+static SGRGlyphView *toggleGlyph(UIView *host, NSString *identifier, const void *findKey, NSString *symbol) {
+    UIView *button = SGRFindByIdentifier(host, identifier, findKey);
+    UIView *content = button.subviews.firstObject;
+    if (!content) {
+        logMissing(identifier);
+        return nil;
+    }
+    static Class icon;
+    if (!icon) icon = NSClassFromString(@"SPTEncoreIconView");
+    SGRGlyphView *glyph = glyphFor(button, symbol, 22);
+    SGForEachView(content, ^(UIView *view) {
+        if (view != glyph && [view isKindOfClass:icon]) SGRPlayerVanish(view);
+    });
+    keepOnTop(glyph, content);
+    return glyph;
 }
 
 #pragma mark - play
@@ -186,6 +220,11 @@ static void playGlyph(UIView *host) {
     skipGlyph(host, @"SPTNowPlayingPreviousTrackButton", &kPreviousKey, @"backward.fill");
     skipGlyph(host, @"SPTNowPlayingNextTrackButton", &kNextKey, @"forward.fill");
     playGlyph(host);
+    if (SGEnabled(SGRKeyAppleIcons)) {
+        sg_shuffleGlyph = toggleGlyph(host, @"Components.UI.ShuffleButton", &kShuffleKey, @"shuffle");
+        sg_repeatGlyph = toggleGlyph(host, @"Nowplaying-RepeatButton", &kRepeatKey, @"repeat");
+        refreshToggles(NO);
+    }
 }
 %end
 
@@ -198,6 +237,7 @@ static void playGlyph(UIView *host) {
     // The first state can land after the controls laid out, which left the disc for want of one.
     if (!sg_playGlyph) [sg_controlsHost setNeedsLayout];
     refreshPlayGlyph(YES);
+    refreshToggles(YES);
     // Spotify raises its spinner a moment after a state says loading, and drops it a moment after.
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kSpinnerCheck * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ refreshPlayGlyph(YES); });
 }

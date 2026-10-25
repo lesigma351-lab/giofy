@@ -28,7 +28,8 @@ static const NSTimeInterval kExitDuration = 0.15;
 // Defaults of the Motion sliders: a little bounce, and a quarter slower than the timings above, which are
 // what Speed 100 gives. Bounce 40 puts a press at about the damping it had before the slider existed.
 const NSInteger SGRMotionBounceDefault = 70;
-const NSInteger SGRMotionSpeedDefault = 75;
+const NSInteger SGRMotionPlayerBounceDefault = 30;
+const NSInteger SGRMotionSpeedDefault = 65;
 
 UIColor *SGRPrimary(void) {
     return UIColor.whiteColor;
@@ -99,7 +100,11 @@ NSInteger SGRMotionBounce(void) {
 }
 
 NSInteger SGRMotionSpeed(void) {
-    return MAX(50, MIN(150, SGInt(SGRKeyMotionSpeed, SGRMotionSpeedDefault)));
+    return MAX(25, MIN(150, SGInt(SGRKeyMotionSpeed, SGRMotionSpeedDefault)));
+}
+
+NSInteger SGRMotionPlayerBounce(void) {
+    return MAX(0, MIN(100, SGInt(SGRKeyMotionPlayerBounce, SGRMotionPlayerBounceDefault)));
 }
 
 // A base timing at the Speed slider's setting: 100 is the base, 80 a quarter longer, 150 a third shorter.

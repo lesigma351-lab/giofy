@@ -198,7 +198,7 @@ static void react(UIView *card, SGRTopPickFace *face) {
         UIView *strongCard = weakCard;
         if (!strongCard || SGRReduceMotion()) return;
         [weakFace setLit:down];
-        SGRAnimate(SGRMotionPress, ^{ strongCard.transform = down ? CGAffineTransformMakeScale(0.91, 0.91) : CGAffineTransformIdentity; }, nil);
+        SGRAnimate(SGRMotionPress, ^{ strongCard.transform = down ? CGAffineTransformMakeScale(1 - MAX(0, MIN(25, SGInt(SGRKeyHomeCardSquish, 9))) / 100.0, 1 - MAX(0, MIN(25, SGInt(SGRKeyHomeCardSquish, 9))) / 100.0) : CGAffineTransformIdentity; }, nil);
     };
     UIControl *control = (UIControl *)card;
     UIControlEvents down = UIControlEventTouchDown | UIControlEventTouchDragEnter;

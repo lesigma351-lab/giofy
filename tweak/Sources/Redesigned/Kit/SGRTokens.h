@@ -70,10 +70,14 @@ typedef NS_ENUM(NSInteger, SGRMotion) {
 #define SGRKeyMotionSpeed @"spotifyglass.redesign.motion.speed"
 // The player's open and close on the mod's own spring (Player/PlayerMorph.x), by these two sliders. On until switched off.
 #define SGRKeyMotionPlayer @"spotifyglass.redesign.motion.player"
+// How much the player's own spring gives back, 0 to 100, apart from the Bounce slider so the player can be calm while the rest is playful.
+#define SGRKeyMotionPlayerBounce @"spotifyglass.redesign.motion.playerBounce"
+extern const NSInteger SGRMotionPlayerBounceDefault;   // 30
+NSInteger SGRMotionPlayerBounce(void);   // 0...100
 extern const NSInteger SGRMotionBounceDefault;   // 70
-extern const NSInteger SGRMotionSpeedDefault;    // 75
+extern const NSInteger SGRMotionSpeedDefault;    // 65
 NSInteger SGRMotionBounce(void);   // 0...100
-NSInteger SGRMotionSpeed(void);    // 50...150
+NSInteger SGRMotionSpeed(void);    // 25...150
 
 // Runs `animations` with the motion's timing, or at once under Reduce Motion (except a fade, a response or an exit), and
 // always calls `completion`. Only transform, alpha and color belong in it while a page scrolls.

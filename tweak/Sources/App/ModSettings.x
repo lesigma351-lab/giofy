@@ -28,7 +28,6 @@
 #import "Shared/Player/PlayerSettings.h"
 #import "Shared/Sing/Sing.h"
 #import "Shared/Haptics/Haptics.h"
-#import "Shared/MusicOnly/MusicOnly.h"
 #import "App/About/About.h"
 #import "App/Onboarding/Onboarding.h"
 #import "Redesigned/Album/Album.h"
@@ -77,7 +76,7 @@ static UIViewController *modSettingsPage(void) {
         home,
     ])];
 
-    [sections addObject:SGSection(nil, @[SGMusicOnlyRow()])];
+    [sections addObject:SGGioSection()];
 
     // Sing and the audio effects work on the sound, so both looks have them; Audio effects says how many are on.
     SGModRow *sing = pageRow(@"Karaoke", @"music.mic", UIColor.systemRedColor, ^UIViewController *{ return SGSingSettingsPage(); });

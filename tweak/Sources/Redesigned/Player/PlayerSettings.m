@@ -397,3 +397,9 @@ UIViewController *SGRPlayerSettingsPage(NSArray *more) {
     [backgrounds addTarget:page action:@selector(backgroundPicked) forControlEvents:UIControlEventValueChanged];
     return page;
 }
+
+NSArray<SGModRow *> *SGRPlayerGioRows(void) {
+    return @[
+        SGWithSymbol(SGSwitchRow(@"Apple Music icons", @"Shuffle and repeat drawn the way the Music app draws them, lit in the accent while on. Restart to apply.", SGRKeyAppleIcons), @"shuffle"),
+    ];
+}

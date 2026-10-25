@@ -38,8 +38,14 @@
 // Top picks above the shortcuts (HomeOrder.m): the page's layout answers with the Top picks section first and what was above
 // it moved down. On until switched off.
 #define SGRKeyHomeCardsFirst @"spotifyglass.redesign.home.cardsFirst"
+// How far a Top picks card squishes under a finger, 0 to 25 percent (HomeTopPickCard.m), 9 to begin with.
+#define SGRKeyHomeCardSquish @"spotifyglass.redesign.home.cardSquish"
+// How strong the Home wash is, 0 to 100 (HomeWash.m), 95 to begin with, and how far down the page it reaches in points, 620 to begin with.
+#define SGRKeyHomeWashStrength @"spotifyglass.redesign.home.washStrength"
+#define SGRKeyHomeWashDepth @"spotifyglass.redesign.home.washDepth"
 @class SGModRow;
 NSArray<SGModRow *> *SGRHomeAppearanceRows(void);   // for the Appearance page (App/Pages.m)
+NSArray<SGModRow *> *SGRHomeGioRows(void);          // the rows that are Gio's additions (App/Gio.m)
 // The Color setting as 0...1 (HomeCoverColor.x).
 CGFloat SGRHomeColor(void);
 // The color with its saturation multiplied by `lift`, capped at 1, hue and brightness kept (HomeCoverColor.x).

@@ -97,7 +97,7 @@ UIViewController *SGAppearancePage(void) {
     if (icon) [everywhere addObject:icon];
     NSArray<SGModRow *> *looks;
     if (SGRedesignedUIStored()) {
-        looks = [[SGRAppearanceRows() arrayByAddingObjectsFromArray:SGRHomeAppearanceRows()] arrayByAddingObjectsFromArray:SGRLibraryAppearanceRows()];
+        looks = [SGRAppearanceRows() arrayByAddingObjectsFromArray:SGRHomeAppearanceRows()];
     } else {
         looks = SGNativeAppearanceRows();
     }

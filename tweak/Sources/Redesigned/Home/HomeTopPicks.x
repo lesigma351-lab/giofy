@@ -94,24 +94,40 @@ static UICollectionViewCompositionalLayout *boxed(UICollectionViewCompositionalL
     return made;
 }
 
-// Where a drag of a shelf that scrolls itself across comes to rest: the leading edge of the card nearest to where it
-// would have, one card on at most in the direction of the fling.
+// Where a drag of a shelf that scrolls itself across comes to rest: the leading edge of the next card in the direction of
+// a fling, never further, so the cards go one by one; a slow drag lets go on the card nearest to where it would have.
 static CGPoint snapped(UICollectionViewLayout *layout, CGPoint proposed, CGPoint velocity) {
     UICollectionView *view = layout.collectionView;
     if (!view) return proposed;
     CGFloat inset = view.adjustedContentInset.left, current = view.contentOffset.x;
-    CGRect area = CGRectMake(proposed.x - view.bounds.size.width, 0, view.bounds.size.width * 3, MAX(view.contentSize.height, view.bounds.size.height));
-    CGFloat best = proposed.x, distance = CGFLOAT_MAX;
+    CGRect area = CGRectMake(current - view.bounds.size.width * 2, 0, view.bounds.size.width * 5, MAX(view.contentSize.height, view.bounds.size.height));
+    NSMutableArray<NSNumber *> *edges = [NSMutableArray array];
     for (UICollectionViewLayoutAttributes *attributes in [layout layoutAttributesForElementsInRect:area]) {
         if (attributes.representedElementCategory != UICollectionElementCategoryCell) continue;
-        CGFloat x = attributes.frame.origin.x - inset;
-        // A fling moves on from where the drag let go, never back past it.
-        if (velocity.x > 0 && x <= current) continue;
-        if (velocity.x < 0 && x >= current) continue;
-        CGFloat d = fabs(x - proposed.x);
-        if (d < distance) {
-            distance = d;
-            best = x;
+        [edges addObject:@(attributes.frame.origin.x - inset)];
+    }
+    if (!edges.count) return proposed;
+    CGFloat best = proposed.x;
+    if (fabs(velocity.x) > 0.2) {
+        // The nearest edge past the one the drag started from, in the way it is going.
+        CGFloat distance = CGFLOAT_MAX;
+        for (NSNumber *edge in edges) {
+            CGFloat x = edge.doubleValue;
+            if (velocity.x > 0 ? x <= current + 1 : x >= current - 1) continue;
+            if (fabs(x - current) < distance) {
+                distance = fabs(x - current);
+                best = x;
+            }
+        }
+        if (distance == CGFLOAT_MAX) best = current;
+    } else {
+        CGFloat distance = CGFLOAT_MAX;
+        for (NSNumber *edge in edges) {
+            CGFloat d = fabs(edge.doubleValue - proposed.x);
+            if (d < distance) {
+                distance = d;
+                best = edge.doubleValue;
+            }
         }
     }
     CGFloat most = MAX(-inset, view.contentSize.width + view.adjustedContentInset.right - view.bounds.size.width);

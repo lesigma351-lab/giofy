@@ -43,7 +43,7 @@ static const CGFloat kScreenRadiusFallback = 55;
 // travel (the card to the screen is 800 pt, so 10% would be 80): each unit of overshoot swells the sheet by this
 // many points on every side, up to the limit. Opening, the player swells a little past the screen's edges and
 // settles; closing, the card swells a little past its own size and settles.
-static const CGFloat kPopPoints = 280, kPopLimit = 44;
+static const CGFloat kPopPoints = 150, kPopLimit = 22;
 
 static CGFloat lerp(CGFloat a, CGFloat b, CGFloat t) {
     return a + (b - a) * t;
@@ -75,8 +75,8 @@ static CGFloat springStep(CFTimeInterval elapsed, CFTimeInterval duration, CGFlo
 // The damping ratio for the Bounce slider (SGRTokens.h): 0 is a spring that does not overshoot, 40 gives back a
 // tenth of its travel, 70 about a fifth and 100 over a quarter.
 static CGFloat playerDamping(void) {
-    static const CGFloat bounce[] = {0, 40, 70, 100}, ratio[] = {0.95, 0.50, 0.36, 0.26};
-    CGFloat value = SGRMotionBounce();
+    static const CGFloat bounce[] = {0, 30, 60, 100}, ratio[] = {0.95, 0.72, 0.56, 0.42};
+    CGFloat value = SGRMotionPlayerBounce();
     for (int i = 1; i < 4; i++) {
         if (value <= bounce[i]) return ratio[i - 1] + (ratio[i] - ratio[i - 1]) * (value - bounce[i - 1]) / (bounce[i] - bounce[i - 1]);
     }
@@ -140,7 +140,7 @@ static CGFloat screenRadius(void) {
     }
     if (_dragging) return progress;
     // Spotify's own spring decides when it is over; this one rides the same tap on its own timing, bouncing where Spotify's does not.
-    CFTimeInterval duration = 0.38 * 100.0 / SGRMotionSpeed();
+    CFTimeInterval duration = 0.42 * 100.0 / SGRMotionSpeed();
     CGFloat step = springStep(now - _started, duration, playerDamping());
     return _opening ? step : 1 - step;
 }
@@ -253,11 +253,11 @@ static CGFloat screenRadius(void) {
         overlay.layer.sublayerTransform = CATransform3DScale(CATransform3DMakeTranslation(shift.x, shift.y, 0), scale, scale, 1);
         self->_mask.frame = CGRectMake(target.x, target.y, sheet.size.width, sheet.size.height);
         self->_mask.cornerRadius = radius;
-        if (!self->_follows) overlay.alpha = ramp(0.08, 0.55, t);
+        if (!self->_follows) overlay.alpha = ramp(0, 0.2, t);
 
         self->_sheet.frame = sheet;
         self->_sheet.layer.cornerRadius = radius;
-        self->_sheet.alpha = ramp(0, 0.15, t);
+        self->_sheet.alpha = ramp(0.04, 0.3, t);
 
         // The card's top edge is the sheet's.
         CGFloat rise = sheet.origin.y - self->_card.origin.y;

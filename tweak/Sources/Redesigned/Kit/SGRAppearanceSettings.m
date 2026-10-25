@@ -11,7 +11,7 @@ static NSArray<NSString *> *motionPresets(void) {
 }
 
 static const NSInteger kPresetBounce[] = {0, 15, 40, 70, 100};
-static const NSInteger kPresetSpeed[] = {100, 80, 80, 75, 70};
+static const NSInteger kPresetSpeed[] = {100, 75, 70, 65, 60};
 
 static NSString *motionPresetName(void) {
     NSArray<NSString *> *names = motionPresets();
@@ -65,6 +65,15 @@ NSArray<SGModRow *> *SGRAppearanceRows(void) {
     });
     colour.swatch = ^UIColor *{ return SGColorRGB(SGRAccentRGB()); };
 
+    return @[
+        SGWithSymbol(menu, @"paintpalette"),
+        SGWithSymbol(colour, @"eyedropper"),
+        SGWithSymbol(SGOptionRow(@"Plain checkmark", @"A saved song's tick without its circle, in the accent", SGRKeyPlainCheck), @"checkmark"),
+    ];
+}
+
+// Gio's additions: the motion presets and sliders (App/Gio.m puts them on Mod Settings).
+NSArray<SGModRow *> *SGRGioMotionRows(void) {
     // Motion: a preset, and the two sliders it sets. They apply as they are dragged, to every animation of the
     // redesign that runs through SGRAnimate; Reduce Motion still turns the springs off.
     SGModRow *motion = SGMenuRow(@"Motion", motionPresets(), ^NSString *{ return motionPresetName(); }, ^(NSInteger index) {
@@ -75,17 +84,19 @@ NSArray<SGModRow *> *SGRAppearanceRows(void) {
                                    ^double { return (double)SGRMotionBounce(); },
                                    ^(double value) { SGSetInt(SGRKeyMotionBounce, (NSInteger)value); },
                                    ^NSString *(double value) { return [NSString stringWithFormat:@"%d%%", (int)value]; });
-    SGModRow *speed = SGSliderRow(@"Speed", @"How fast animations play. Lower is slower and smoother, 100% is the original.", 50, 150, 5,
+    SGModRow *speed = SGSliderRow(@"Speed", @"How fast animations play. Lower is slower and smoother, 100% is the original.", 25, 150, 5,
                                   ^double { return (double)SGRMotionSpeed(); },
                                   ^(double value) { SGSetInt(SGRKeyMotionSpeed, (NSInteger)value); },
                                   ^NSString *(double value) { return [NSString stringWithFormat:@"%d%%", (int)value]; });
+    SGModRow *playerBounce = SGSliderRow(@"Player bounce", @"How far the player overshoots as it opens and closes, apart from Bounce. 0 is a clean glide.", 0, 100, 5,
+                                         ^double { return (double)SGRMotionPlayerBounce(); },
+                                         ^(double value) { SGSetInt(SGRKeyMotionPlayerBounce, (NSInteger)value); },
+                                         ^NSString *(double value) { return [NSString stringWithFormat:@"%d%%", (int)value]; });
     return @[
-        SGWithSymbol(menu, @"paintpalette"),
-        SGWithSymbol(colour, @"eyedropper"),
-        SGWithSymbol(SGOptionRow(@"Plain checkmark", @"A saved song's tick without its circle, in the accent", SGRKeyPlainCheck), @"checkmark"),
         SGWithSymbol(motion, @"sparkles"),
         SGWithSymbol(bounce, @"waveform.path"),
         SGWithSymbol(speed, @"speedometer"),
-        SGWithSymbol(SGSwitchRow(@"Springy player", @"The player opens and closes on a spring of its own, with the Bounce and Speed above. Off leaves Spotify's animation.", SGRKeyMotionPlayer), @"arrow.up.and.down.circle"),
+        SGWithSymbol(SGSwitchRow(@"Springy player", @"The player opens and closes on a spring of its own, with the Speed above and Player bounce below. Off leaves Spotify's animation.", SGRKeyMotionPlayer), @"arrow.up.and.down.circle"),
+        SGWithSymbol(playerBounce, @"arrow.up.and.down.square"),
     ];
 }

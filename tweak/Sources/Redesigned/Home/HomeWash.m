@@ -16,7 +16,16 @@
 #import "Home.h"
 
 // How far the wash reaches down the page from its top, and how far up it reaches for the rubber band of an overscroll.
-static const CGFloat kWashDepth = 620, kWashAbove = 900;
+static const CGFloat kWashAbove = 900;
+
+// How far down the page the wash reaches (the Wash depth setting) and its strength (0 to 1).
+static CGFloat washDepth(void) {
+    return MAX(300, MIN(1000, SGInt(SGRKeyHomeWashDepth, 620)));
+}
+
+static CGFloat washStrength(void) {
+    return MAX(0, MIN(100, SGInt(SGRKeyHomeWashStrength, 95))) / 100.0;
+}
 // Where the shelf's leading card sits from the shelf's edge.
 static const CGFloat kLead = 20;
 
@@ -71,13 +80,13 @@ static void clear(UIView *view) {
         _page = page;
         [page.layer insertSublayer:_wash atIndex:0];
     }
-    CGFloat top = -(page.adjustedContentInset.top + kWashAbove);
+    CGFloat top = -(page.adjustedContentInset.top + kWashAbove), depth = washDepth();
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
-    _wash.frame = CGRectMake(0, top, page.bounds.size.width, kWashDepth - top);
+    _wash.frame = CGRectMake(0, top, page.bounds.size.width, depth - top);
     // Solid from the top of the layer to the screen's top, so an overscroll pulls down into the same color.
-    CGFloat height = kWashDepth - top, zero = -top / height;
-    _wash.locations = @[@0, @(zero), @(zero + 0.45 * kWashDepth / height), @1];
+    CGFloat height = depth - top, zero = -top / height;
+    _wash.locations = @[@0, @(zero), @(zero + 0.45 * depth / height), @1];
     [CATransaction commit];
     if (_paging != paging) {
         if (_paging) [_paging removeObserver:self forKeyPath:@"contentOffset" context:kContext];
@@ -128,8 +137,8 @@ static UIColor *blend(UIColor *a, UIColor *b, CGFloat t) {
     _color = color;
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
-    _wash.colors = @[(id)[color colorWithAlphaComponent:0.95].CGColor, (id)[color colorWithAlphaComponent:0.95].CGColor,
-                    (id)[color colorWithAlphaComponent:0.45].CGColor, (id)[color colorWithAlphaComponent:0].CGColor];
+    _wash.colors = @[(id)[color colorWithAlphaComponent:washStrength()].CGColor, (id)[color colorWithAlphaComponent:washStrength()].CGColor,
+                    (id)[color colorWithAlphaComponent:0.47 * washStrength()].CGColor, (id)[color colorWithAlphaComponent:0].CGColor];
     [CATransaction commit];
 }
 @end

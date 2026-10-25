@@ -74,13 +74,20 @@ static CGFloat springStep(CFTimeInterval elapsed, CFTimeInterval duration, CGFlo
 
 // The damping ratio for the Bounce slider (SGRTokens.h): 0 is a spring that does not overshoot, 40 gives back a
 // tenth of its travel, 70 about a fifth and 100 over a quarter.
-static CGFloat playerDamping(void) {
+static CGFloat dampingFor(CGFloat value) {
     static const CGFloat bounce[] = {0, 30, 60, 100}, ratio[] = {0.95, 0.72, 0.56, 0.42};
-    CGFloat value = SGRMotionPlayerBounce();
     for (int i = 1; i < 4; i++) {
         if (value <= bounce[i]) return ratio[i - 1] + (ratio[i] - ratio[i - 1]) * (value - bounce[i - 1]) / (bounce[i] - bounce[i - 1]);
     }
     return ratio[3];
+}
+
+static CGFloat playerDamping(void) {
+    return dampingFor(SGRMotionPlayerBounce());
+}
+
+static CGFloat openDamping(void) {
+    return dampingFor(SGRMotionOpenBounce());
 }
 
 static CGFloat screenRadius(void) {
@@ -146,7 +153,7 @@ static BOOL sOpeningHint;
     if (_dragging) return progress;
     // Spotify's own spring decides when it is over; this one rides the same tap on its own timing, bouncing where Spotify's does not.
     CFTimeInterval duration = 0.42 * 100.0 / SGRMotionSpeed();
-    CGFloat step = springStep(now - _started, duration, playerDamping());
+    CGFloat step = springStep(now - _started, duration, _opening ? openDamping() : playerDamping());
     return _opening ? step : 1 - step;
 }
 
@@ -504,8 +511,8 @@ static void followTransition(id transition, id<UIViewControllerContextTransition
     if (!context.isInteractive && SGEnabled(SGRKeyMotionPlayer)) {
         NSTimeInterval declared = [(id<UIViewControllerAnimatedTransitioning>)transition transitionDuration:context];
         follower.duration = declared > 0.15 ? declared * 0.95 : 0.5;
-        follower.damping = playerDamping();
         follower.open = to.isBeingPresented;
+        follower.damping = follower.open ? openDamping() : playerDamping();
         follower.started = CACurrentMediaTime();
         follower.giveUp = MAX(kGiveUp, follower.duration + 0.3);
         follower.spring = YES;

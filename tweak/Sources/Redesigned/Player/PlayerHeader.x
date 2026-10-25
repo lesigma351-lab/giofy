@@ -105,9 +105,172 @@ static void glassInside(UIViewController *unit, NSArray<NSArray<NSString *> *> *
     }
 }
 
+#pragma mark - the player's layout, for Mod Settings
+
+static NSString *sLayoutDump;
+
+NSString *SGRPlayerLayoutDump(void) {
+    return sLayoutDump;
+}
+
+static void dumpTree(UIView *view, NSInteger depth, NSMutableString *out, NSInteger *lines) {
+    if (*lines >= 700 || depth > 12) return;
+    (*lines)++;
+    [out appendFormat:@"%*s%@ id=%@ %@%@\n", (int)depth * 2, "", NSStringFromClass(view.class), view.accessibilityIdentifier ?: @"-",
+     NSStringFromCGRect(view.frame), view.hidden || view.alpha < 0.01 || view.layer.hidden ? @" hidden" : @""];
+    for (UIView *sub in view.subviews) dumpTree(sub, depth + 1, out, lines);
+}
+
+// A moment after the header lays out the player is up and settled: its tree is kept, since the views are gone by the time
+// Mod Settings is open.
+static void keepLayout(UIView *host) {
+    static BOOL pending;
+    static CFTimeInterval last;
+    if (pending || CACurrentMediaTime() - last < 3) return;
+    pending = YES;
+    __weak UIView *weak = host;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.9 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        pending = NO;
+        last = CACurrentMediaTime();
+        UIView *start = weak;
+        if (!start.window) return;
+        while (start.superview && ![NSStringFromClass(start.superview.class) containsString:@"UITransitionView"] && ![start.superview isKindOfClass:UIWindow.class]) {
+            UIView *up = start.superview;
+            if ([NSStringFromClass(up.class) containsString:@"CollectionView"]) break;
+            start = up;
+        }
+        NSMutableString *out = [NSMutableString string];
+        NSInteger lines = 0;
+        dumpTree(start, 0, out, &lines);
+        sLayoutDump = out;
+    });
+}
+
+#pragma mark - the compact header
+
+// The Music app's header: a grabber over the player instead of the arrow and the playlist's name, and the ⋯ down at the
+// right of the like. Spotify's controls stay Spotify's: the ⋯ is moved by a transform (which survives its row laying
+// out again) and a view of the mod's over the player hands it the touches it no longer has room for in its own row.
+static char kAddFindKey, kGrabberKey, kMoreReachKey;
+static __weak UIView *sg_like, *sg_likeRoot;
+
+@interface SGRMoreReach : UIView
+@property (nonatomic, weak) UIView *more;
+@end
+@implementation SGRMoreReach
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    UIView *more = self.more;
+    if (!more.window || self.hidden || ![self pointInside:point withEvent:event]) return nil;
+    return [more hitTest:[more convertPoint:point fromView:self] withEvent:event];
+}
+@end
+
+@interface SGRGrabber : UIView
+@property (nonatomic, weak) UIControl *minimize;
+@end
+@implementation SGRGrabber
+- (instancetype)initWithFrame:(CGRect)frame {
+    if (!(self = [super initWithFrame:frame])) return nil;
+    UIView *pill = [[UIView alloc] initWithFrame:CGRectMake((frame.size.width - 36) / 2, (frame.size.height - 5) / 2, 36, 5)];
+    pill.backgroundColor = [UIColor colorWithWhite:1 alpha:0.4];
+    pill.layer.cornerRadius = 2.5;
+    pill.userInteractionEnabled = NO;
+    pill.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
+    [self addSubview:pill];
+    [self addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapped)]];
+    return self;
+}
+- (void)tapped {
+    [self.minimize sendActionsForControlEvents:UIControlEventTouchUpInside];
+}
+@end
+
+// The view the stack arranges around `view`, when it is no wider than a button; `view` itself otherwise.
+static UIView *buttonHolder(UIView *view, UIView *upto) {
+    for (UIView *v = view; v && v != upto; v = v.superview) {
+        if ([v.superview isKindOfClass:UIStackView.class]) return v.bounds.size.width <= 100 ? v : view;
+    }
+    return view;
+}
+
+static void compactHeader(UIViewController *unit) {
+    UIView *host = unit.viewIfLoaded;
+    if (!host) return;
+    UIView *close = SGRFindByIdentifier(host, @"now-playing-minimize-button", &kCloseKey) ?: SGRFindByIdentifier(host, @"mobile-nowplaying-close-button", &kCloseKey);
+    UIView *more = SGRFindByIdentifier(host, @"Context menu", &kMoreKey);
+    if (close) SGRPlayerVanish(close);
+    // The playlist's name between them.
+    SGForEachView(host, ^(UIView *v) {
+        if ([v isKindOfClass:UILabel.class]) v.layer.hidden = YES;
+    });
+
+    SGRGrabber *grabber = objc_getAssociatedObject(host, &kGrabberKey);
+    if (!grabber) {
+        grabber = [[SGRGrabber alloc] initWithFrame:CGRectMake(0, 0, 96, 28)];
+        objc_setAssociatedObject(host, &kGrabberKey, grabber, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    grabber.minimize = (UIControl *)close;
+    if (grabber.superview != host) [host addSubview:grabber];
+    grabber.center = CGPointMake(CGRectGetMidX(host.bounds), 9);
+    [host bringSubviewToFront:grabber];
+
+    if (!more) return;
+    SGRPlayerMenuWatch(more);
+    // The like: the Add button of the title row, found from the nearest view over the header that holds one.
+    UIView *like = sg_like, *root = sg_likeRoot;
+    if (!like.window || !root || ![like isDescendantOfView:root]) {
+        like = root = nil;
+        NSUInteger depth = 0;
+        for (UIView *up = host.superview; up && !like && depth < 14; up = up.superview, depth++) {
+            like = SGRFindByIdentifier(up, @"Components.UI.AddToButton", &kAddFindKey);
+            if (like) root = up;
+        }
+        sg_like = like;
+        sg_likeRoot = root;
+    }
+    static NSUInteger tries;
+    UIView *moreHolder = buttonHolder(more, host), *likeHolder = like ? buttonHolder(like, root) : nil;
+    if (!like || likeHolder.bounds.size.width < 1 || moreHolder.bounds.size.width < 1) {
+        if (tries++ < 20) {
+            __weak UIView *weakHost = host;
+            dispatch_async(dispatch_get_main_queue(), ^{ [weakHost setNeedsLayout]; });
+        }
+        return;
+    }
+    tries = 0;
+    // Where each stands without its own transform, in the player's coordinates.
+    CGPoint moreAt = [moreHolder.superview convertPoint:moreHolder.center toView:root];
+    CGPoint likeAt = [likeHolder.superview convertPoint:likeHolder.center toView:root];
+    CGAffineTransform toLike = CGAffineTransformMakeTranslation(round(likeAt.x - moreAt.x), round(likeAt.y - moreAt.y));
+    CGAffineTransform aside = CGAffineTransformMakeTranslation(-50, 0);
+    if (!CGAffineTransformEqualToTransform(moreHolder.transform, toLike)) moreHolder.transform = toLike;
+    if (!CGAffineTransformEqualToTransform(likeHolder.transform, aside)) likeHolder.transform = aside;
+
+    SGRMoreReach *reach = objc_getAssociatedObject(host, &kMoreReachKey);
+    if (!reach) {
+        reach = [SGRMoreReach new];
+        objc_setAssociatedObject(host, &kMoreReachKey, reach, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    reach.more = more;
+    if (reach.superview != root) [root addSubview:reach];
+    CGRect drawn = [more convertRect:more.bounds toView:root];
+    CGRect frame = CGRectInset(drawn, MIN(0, (drawn.size.width - 44) / 2), MIN(0, (drawn.size.height - 44) / 2));
+    if (!CGRectEqualToRect(reach.frame, frame)) reach.frame = frame;
+    [root bringSubviewToFront:reach];
+
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ SGLog(@"redesign player: compact header, the ⋯ moved by %@ to the like, which moves by -50", NSStringFromCGAffineTransform(toLike)); });
+}
+
 %hook _TtC20NowPlaying_ModesImpl18HeaderElementsUnit
 - (void)viewDidLayoutSubviews {
     %orig;
+    UIView *shown = ((UIViewController *)self).viewIfLoaded;
+    if (shown) keepLayout(shown);
+    if (SGEnabled(SGRKeyCompactHeader)) {
+        compactHeader((UIViewController *)self);
+        return;
+    }
     static const void *keys[] = {&kCloseKey, &kMoreKey};
     glassInside((UIViewController *)self, @[@[@"now-playing-minimize-button", @"mobile-nowplaying-close-button"], @[@"Context menu"]], keys);
 }

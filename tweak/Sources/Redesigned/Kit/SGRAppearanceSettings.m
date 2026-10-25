@@ -92,11 +92,16 @@ NSArray<SGModRow *> *SGRGioMotionRows(void) {
                                          ^double { return (double)SGRMotionPlayerBounce(); },
                                          ^(double value) { SGSetInt(SGRKeyMotionPlayerBounce, (NSInteger)value); },
                                          ^NSString *(double value) { return [NSString stringWithFormat:@"%d%%", (int)value]; });
+    SGModRow *openBounce = SGSliderRow(@"Open bounce", @"How far the player swells past the screen as it opens. Closing keeps Player bounce. 0 is a clean glide.", 0, 100, 5,
+                                       ^double { return (double)SGRMotionOpenBounce(); },
+                                       ^(double value) { SGSetInt(SGRKeyMotionOpenBounce, (NSInteger)value); },
+                                       ^NSString *(double value) { return [NSString stringWithFormat:@"%d%%", (int)value]; });
     return @[
         SGWithSymbol(motion, @"sparkles"),
         SGWithSymbol(bounce, @"waveform.path"),
         SGWithSymbol(speed, @"speedometer"),
         SGWithSymbol(SGSwitchRow(@"Springy player", @"The player opens and closes on a spring of its own, with the Speed above and Player bounce below. Off leaves Spotify's animation.", SGRKeyMotionPlayer), @"arrow.up.and.down.circle"),
-        SGWithSymbol(playerBounce, @"arrow.up.and.down.square"),
+        SGWithSymbol(openBounce, @"arrow.up.square"),
+        SGWithSymbol(playerBounce, @"arrow.down.square"),
     ];
 }

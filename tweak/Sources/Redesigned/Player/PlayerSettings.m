@@ -400,6 +400,7 @@ UIViewController *SGRPlayerSettingsPage(NSArray *more) {
 
 NSArray<SGModRow *> *SGRPlayerGioRows(void) {
     return @[
-        SGWithSymbol(SGSwitchRow(@"Apple Music icons", @"Shuffle and repeat drawn the way the Music app draws them, lit in the accent while on. Restart to apply.", SGRKeyAppleIcons), @"shuffle"),
+        SGWithSymbol(SGSwitchRow(@"Apple Music icons", @"Shuffle, repeat, devices and the queue drawn the way the Music app draws them, lit in the accent while on. Restart to apply.", SGRKeyAppleIcons), @"shuffle"),
+        SGWithSymbol(SGSwitchRow(@"Compact header", @"A grabber over the player instead of the arrow and the playlist's name, and the ⋯ at the right of the like. Restart to apply.", SGRKeyCompactHeader), @"ellipsis.circle"),
     ];
 }

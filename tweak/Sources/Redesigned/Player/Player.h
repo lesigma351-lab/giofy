@@ -50,6 +50,13 @@
 // The player's rows that are Gio's additions (App/Gio.m).
 @class SGModRow;
 NSArray<SGModRow *> *SGRPlayerGioRows(void);
+// Over `host`'s own drawing (which goes out of sight), `symbol` at the middle of `around`, or of `host` when that is nil.
+@class SGRGlyphView;
+SGRGlyphView *SGRPlayerReplaceGlyph(UIView *host, UIView *around, NSString *symbol, CGFloat size, const void *key);
+// Spotify's header: the Music-style one (a grabber, the ⋯ down by the like) on by default. The dump of the player's views
+// taken while it was open, for Mod Settings' "Copy player layout".
+#define SGRKeyCompactHeader @"spotifyglass.redesign.player.compactHeader"
+NSString *SGRPlayerLayoutDump(void);
 #define SGRKeyPlayerBackground @"spotifyglass.redesign.player.background"
 #define SGRKeyPlayerMotion @"spotifyglass.redesign.player.movingBackground"
 typedef NS_ENUM(NSInteger, SGRPlayerBackgroundKind) {

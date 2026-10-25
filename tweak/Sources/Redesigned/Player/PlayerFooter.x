@@ -45,7 +45,7 @@ static const CGFloat kVolumeMargin = 24;
 // And the controls go up this much over it, so the gaps above and below the volume row match.
 static const CGFloat kVolumeLift = 10;
 
-static char kConnectKey, kShareKey, kTrimmerKey, kSharedByKey, kQueueKey, kLyricsGlyphKey, kReachKey;
+static char kConnectGlyphKey, kQueueGlyphKey, kConnectKey, kShareKey, kTrimmerKey, kSharedByKey, kQueueKey, kLyricsGlyphKey, kReachKey;
 static __weak SGRGlyphButton *sg_lyricsGlyph;
 
 // The view the footer's stack view arranges around `view`.
@@ -111,7 +111,7 @@ static SGRGlyphButton *lyricsGlyphIn(UIView *host) {
 static UIView *connectGlyphIn(UIView *holder) {
     __block UIView *glyph = nil;
     SGForEachView(holder, ^(UIView *view) {
-        if (!glyph && [view isKindOfClass:UIImageView.class] && view.bounds.size.width > 0 && view.bounds.size.width <= kGlyphMaxWidth) glyph = view;
+        if (!glyph && [view isKindOfClass:UIImageView.class] && ![view isKindOfClass:SGRGlyphView.class] && view.bounds.size.width > 0 && view.bounds.size.width <= kGlyphMaxWidth) glyph = view;
     });
     return glyph;
 }
@@ -283,6 +283,13 @@ static void lowerRow(UIView *row) {
 
     UIView *queue = SGRFindByIdentifier(host, @"QueueButtonNowPlaying", &kQueueKey);
     CGFloat queueFrom = moveTo(arrangedAround(queue, host), queue, CGPointMake(CGRectGetMidX(queue.bounds), CGRectGetMidY(queue.bounds)), host, round(width * (rtl ? kLeading : kTrailing)));
+
+    // The Music app's glyphs, drawn over Spotify's, which go out of sight: the AirPlay glyph for the devices and the list
+    // for the queue.
+    if (SGEnabled(SGRKeyAppleIcons)) {
+        if (glyph.superview) SGRPlayerReplaceGlyph(glyph.superview, glyph, @"airplayaudio", 22, &kConnectGlyphKey);
+        if (queue) SGRPlayerReplaceGlyph(queue, nil, @"list.bullet", 21, &kQueueGlyphKey);
+    }
 
     lowerRow(host);
     coverConnect(arrangedAround(connect, host), glyph);

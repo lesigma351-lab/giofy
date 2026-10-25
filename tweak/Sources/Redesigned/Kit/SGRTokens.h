@@ -72,6 +72,10 @@ typedef NS_ENUM(NSInteger, SGRMotion) {
 #define SGRKeyMotionPlayer @"spotifyglass.redesign.motion.player"
 // How much the player's own spring gives back, 0 to 100, apart from the Bounce slider so the player can be calm while the rest is playful.
 #define SGRKeyMotionPlayerBounce @"spotifyglass.redesign.motion.playerBounce"
+// How much the player gives back as it OPENS, apart from closing: a swell past the screen reads as a jolt, so it is calm by default.
+#define SGRKeyMotionOpenBounce @"spotifyglass.redesign.motion.openBounce"
+extern const NSInteger SGRMotionOpenBounceDefault;   // 8
+NSInteger SGRMotionOpenBounce(void);   // 0...100
 extern const NSInteger SGRMotionPlayerBounceDefault;   // 30
 NSInteger SGRMotionPlayerBounce(void);   // 0...100
 extern const NSInteger SGRMotionBounceDefault;   // 70

@@ -29,6 +29,7 @@ static const NSTimeInterval kExitDuration = 0.15;
 // what Speed 100 gives. Bounce 40 puts a press at about the damping it had before the slider existed.
 const NSInteger SGRMotionBounceDefault = 70;
 const NSInteger SGRMotionPlayerBounceDefault = 30;
+const NSInteger SGRMotionOpenBounceDefault = 8;
 const NSInteger SGRMotionSpeedDefault = 65;
 
 UIColor *SGRPrimary(void) {
@@ -101,6 +102,10 @@ NSInteger SGRMotionBounce(void) {
 
 NSInteger SGRMotionSpeed(void) {
     return MAX(25, MIN(150, SGInt(SGRKeyMotionSpeed, SGRMotionSpeedDefault)));
+}
+
+NSInteger SGRMotionOpenBounce(void) {
+    return MAX(0, MIN(100, SGInt(SGRKeyMotionOpenBounce, SGRMotionOpenBounceDefault)));
 }
 
 NSInteger SGRMotionPlayerBounce(void) {

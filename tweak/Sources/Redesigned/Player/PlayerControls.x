@@ -113,20 +113,57 @@ static void refreshToggles(BOOL animated) {
     }
 }
 
-static SGRGlyphView *toggleGlyph(UIView *host, NSString *identifier, const void *findKey, NSString *symbol) {
+// Spotify's own drawing under a glyph of the mod's goes out of sight on the layer, which nothing of Spotify's resets
+// the way it resets a view's alpha; the glyph alone then shows, and never beside the old one.
+static void hideNative(UIView *container, UIView *keep) {
+    SGForEachView(container, ^(UIView *view) {
+        if (view == container || view == keep || view == (UIView *)keep.superview) return;
+        if ([view isKindOfClass:SGRGlyphView.class]) return;
+        view.layer.hidden = YES;
+    });
+}
+
+// A control by its identifier, else by a word in one: Spotify names the shuffle and repeat buttons differently from one
+// build to the next.
+static UIView *findToggle(UIView *host, NSString *identifier, const void *findKey, NSString *word) {
     UIView *button = SGRFindByIdentifier(host, identifier, findKey);
-    UIView *content = button.subviews.firstObject;
+    if (button) return button;
+    __block UIView *found = nil;
+    SGForEachView(host, ^(UIView *view) {
+        NSString *name = view.accessibilityIdentifier;
+        if (!found && name.length && [name rangeOfString:word options:NSCaseInsensitiveSearch].location != NSNotFound && view.bounds.size.width >= 20) found = view;
+    });
+    return found;
+}
+
+static SGRGlyphView *toggleGlyph(UIView *host, NSString *identifier, const void *findKey, NSString *word, NSString *symbol) {
+    UIView *button = findToggle(host, identifier, findKey, word);
+    UIView *content = button.subviews.firstObject ?: button;
     if (!content) {
         logMissing(identifier);
         return nil;
     }
-    static Class icon;
-    if (!icon) icon = NSClassFromString(@"SPTEncoreIconView");
     SGRGlyphView *glyph = glyphFor(button, symbol, 22);
-    SGForEachView(content, ^(UIView *view) {
-        if (view != glyph && [view isKindOfClass:icon]) SGRPlayerVanish(view);
-    });
+    hideNative(content, glyph);
     keepOnTop(glyph, content);
+    return glyph;
+}
+
+// `symbol` in the middle of `around` (or of `host`) over what `host` drew before, which goes out of sight: the Music
+// app's glyph for the devices and the queue (PlayerFooter.x).
+SGRGlyphView *SGRPlayerReplaceGlyph(UIView *host, UIView *around, NSString *symbol, CGFloat size, const void *key) {
+    if (!host) return nil;
+    SGRGlyphView *glyph = objc_getAssociatedObject(host, key);
+    if (!glyph) {
+        glyph = [[SGRGlyphView alloc] initWithSymbol:symbol pointSize:size weight:UIImageSymbolWeightRegular];
+        objc_setAssociatedObject(host, key, glyph, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    if (glyph.superview != host) [host addSubview:glyph];
+    hideNative(host, glyph);
+    UIView *of = around ?: host;
+    glyph.center = [host convertPoint:CGPointMake(CGRectGetMidX(of.bounds), CGRectGetMidY(of.bounds)) fromView:of];
+    glyph.tintColor = SGRSecondary();
+    [host bringSubviewToFront:glyph];
     return glyph;
 }
 
@@ -222,8 +259,8 @@ static void playGlyph(UIView *host) {
     skipGlyph(host, @"SPTNowPlayingNextTrackButton", &kNextKey, @"forward.fill");
     playGlyph(host);
     if (SGEnabled(SGRKeyAppleIcons)) {
-        sg_shuffleGlyph = toggleGlyph(host, @"Components.UI.ShuffleButton", &kShuffleKey, @"shuffle");
-        sg_repeatGlyph = toggleGlyph(host, @"Nowplaying-RepeatButton", &kRepeatKey, @"repeat");
+        sg_shuffleGlyph = toggleGlyph(host, @"Components.UI.ShuffleButton", &kShuffleKey, @"shuffle", @"shuffle");
+        sg_repeatGlyph = toggleGlyph(host, @"Nowplaying-RepeatButton", &kRepeatKey, @"repeat", @"repeat");
         refreshToggles(NO);
     }
 }

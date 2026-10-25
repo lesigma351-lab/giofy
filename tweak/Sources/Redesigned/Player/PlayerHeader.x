@@ -114,7 +114,7 @@ NSString *SGRPlayerLayoutDump(void) {
 }
 
 static void dumpTree(UIView *view, NSInteger depth, NSMutableString *out, NSInteger *lines) {
-    if (*lines >= 700 || depth > 12) return;
+    if (*lines >= 900 || depth > 18) return;
     (*lines)++;
     [out appendFormat:@"%*s%@ id=%@ %@%@\n", (int)depth * 2, "", NSStringFromClass(view.class), view.accessibilityIdentifier ?: @"-",
      NSStringFromCGRect(view.frame), view.hidden || view.alpha < 0.01 || view.layer.hidden ? @" hidden" : @""];

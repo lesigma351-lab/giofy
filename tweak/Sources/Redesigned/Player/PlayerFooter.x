@@ -287,8 +287,10 @@ static void lowerRow(UIView *row) {
     // The Music app's glyphs, drawn over Spotify's, which go out of sight: the AirPlay glyph for the devices and the list
     // for the queue.
     if (SGEnabled(SGRKeyAppleIcons)) {
-        if (glyph.superview) SGRPlayerReplaceGlyph(glyph.superview, glyph, @"airplayaudio", 22, &kConnectGlyphKey);
-        if (queue) SGRPlayerReplaceGlyph(queue, nil, @"list.bullet", 21, &kQueueGlyphKey);
+        // Connect has no image view on some phones (a button drawing its own image), so the control as a whole is replaced.
+        UIView *connectView = glyph ?: connect;
+        if (connectView.superview) SGRPlayerReplaceGlyph(connectView.superview, connectView, @"airplayaudio", 22, &kConnectGlyphKey);
+        if (queue.superview) SGRPlayerReplaceGlyph(queue.superview, queue, @"list.bullet", 21, &kQueueGlyphKey);
     }
 
     lowerRow(host);

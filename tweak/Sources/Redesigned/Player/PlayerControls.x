@@ -31,7 +31,7 @@ static const NSTimeInterval kSpinnerCheck = 0.6;
 // one sent before the player caught up, for this long; after it the player's word is final.
 static const NSTimeInterval kTapTrust = 1.2;
 
-static char kPreviousKey, kNextKey, kPlayKey, kGlyphKey, kTakeKey, kRemainingKey, kShuffleKey, kRepeatKey;
+static char kShuffleGlyphKey, kRepeatGlyphKey, kPreviousKey, kNextKey, kPlayKey, kGlyphKey, kTakeKey, kRemainingKey, kShuffleKey, kRepeatKey;
 static __weak SGRGlyphView *sg_shuffleGlyph, *sg_repeatGlyph;
 static __weak UIView *sg_playView;
 static __weak UIButton *sg_playButton;
@@ -136,35 +136,33 @@ static UIView *findToggle(UIView *host, NSString *identifier, const void *findKe
     return found;
 }
 
-static SGRGlyphView *toggleGlyph(UIView *host, NSString *identifier, const void *findKey, NSString *word, NSString *symbol) {
-    UIView *button = findToggle(host, identifier, findKey, word);
-    UIView *content = button.subviews.firstObject ?: button;
-    if (!content) {
-        logMissing(identifier);
-        return nil;
-    }
-    SGRGlyphView *glyph = glyphFor(button, symbol, 22);
-    hideNative(content, glyph);
-    keepOnTop(glyph, content);
-    return glyph;
-}
-
-// `symbol` in the middle of `around` (or of `host`) over what `host` drew before, which goes out of sight: the Music
-// app's glyph for the devices and the queue (PlayerFooter.x).
+// `symbol` in the middle of `around`, a control of Spotify's whose own drawing goes out of sight, drawn in the view that
+// holds it (or, with `around` nil, in `host`'s middle over what `host` holds): the Music app's glyph. The control keeps
+// its touches, its action and its state; only its layer is hidden, which nothing of Spotify's resets.
 SGRGlyphView *SGRPlayerReplaceGlyph(UIView *host, UIView *around, NSString *symbol, CGFloat size, const void *key) {
     if (!host) return nil;
     SGRGlyphView *glyph = objc_getAssociatedObject(host, key);
     if (!glyph) {
         glyph = [[SGRGlyphView alloc] initWithSymbol:symbol pointSize:size weight:UIImageSymbolWeightRegular];
+        glyph.tintColor = SGRSecondary();
         objc_setAssociatedObject(host, key, glyph, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     if (glyph.superview != host) [host addSubview:glyph];
-    hideNative(host, glyph);
+    if (around) around.layer.hidden = YES;
+    else hideNative(host, glyph);
     UIView *of = around ?: host;
     glyph.center = [host convertPoint:CGPointMake(CGRectGetMidX(of.bounds), CGRectGetMidY(of.bounds)) fromView:of];
-    glyph.tintColor = SGRSecondary();
     [host bringSubviewToFront:glyph];
     return glyph;
+}
+
+static SGRGlyphView *toggleGlyph(UIView *host, NSString *identifier, const void *findKey, NSString *word, NSString *symbol) {
+    UIView *button = findToggle(host, identifier, findKey, word);
+    if (!button || !button.superview) {
+        logMissing(identifier);
+        return nil;
+    }
+    return SGRPlayerReplaceGlyph(button.superview, button, symbol, 22, findKey == &kShuffleKey ? &kShuffleGlyphKey : &kRepeatGlyphKey);
 }
 
 #pragma mark - play
